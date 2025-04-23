@@ -12,6 +12,7 @@ class _ReactorTabState extends State<ReactorTab> {
 
   String selectedLengthUnit = 'm';
   String selectedDiameterUnit = 'm';
+  String selectedParticleDiameterUnit = 'm';
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +22,7 @@ class _ReactorTabState extends State<ReactorTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _rowWithDropdown(
-            label: 'Length',
+            label: 'Reactor Length',
             selectedValue: selectedLengthUnit,
             onChanged: (value) {
               setState(() {
@@ -30,7 +31,7 @@ class _ReactorTabState extends State<ReactorTab> {
             },
           ),
           _rowWithDropdown(
-            label: 'Diameter',
+            label: 'Reactor Diameter',
             selectedValue: selectedDiameterUnit,
             onChanged: (value) {
               setState(() {
@@ -38,8 +39,17 @@ class _ReactorTabState extends State<ReactorTab> {
               });
             },
           ),
-          _textOnlyField('Porosity'),
+          _textOnlyField('Catalyst Porosity'),
           _textOnlyField('Catalyst Density [kg/m³]'),
+          _rowWithDropdown(
+            label: 'Catalyst Particle Diameter',
+            selectedValue: selectedParticleDiameterUnit,
+            onChanged: (value) {
+              setState(() {
+                selectedParticleDiameterUnit = value!;
+              });
+            },
+          ),
         ],
       ),
     );

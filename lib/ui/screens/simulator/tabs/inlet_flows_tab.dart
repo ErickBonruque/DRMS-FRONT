@@ -19,6 +19,7 @@ class _InletFlowsTabState extends State<InletFlowsTab> {
 
   String selectedUnitCH4 = 'm³/s';
   String selectedUnitCO2 = 'm³/s';
+  String selectedUnitH2O = 'm³/s'; // Adicionando variável para água
   String selectedUnitPressure = 'bar';
 
   @override
@@ -49,6 +50,16 @@ class _InletFlowsTabState extends State<InletFlowsTab> {
             },
           ),
           _rowWithDropdown(
+            label: 'Inlet Water Vapor Flow',
+            unitList: flowUnits,
+            selectedValue: selectedUnitH2O,
+            onChanged: (value) {
+              setState(() {
+                selectedUnitH2O = value!;
+              });
+            },
+          ),
+          _rowWithDropdown(
             label: 'Pressure',
             unitList: const ['bar'],
             selectedValue: selectedUnitPressure,
@@ -60,7 +71,7 @@ class _InletFlowsTabState extends State<InletFlowsTab> {
           ),
           const SizedBox(height: 32),
           const Text(
-            '* Flows of methane and carbon dioxide at inlet temperature and pressure',
+            '* Flows of methane, carbon dioxide and water vapor at inlet temperature and pressure',
             style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
           ),
         ],
