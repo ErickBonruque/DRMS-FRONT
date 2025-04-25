@@ -1,14 +1,154 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'kinetics_model.dart';
+import '../../../../constants/kinetics_constants.dart';
 
 class EleyRidealModel extends StatelessWidget implements KineticsModel {
   final bool isReversible;
-  
+  final String reactionType;
+
   const EleyRidealModel({
     super.key, 
-    this.isReversible = false,
+    required this.isReversible,
+    required this.reactionType,
   });
+
+  @override
+  Widget buildRateEquation() {
+    String equation;
+    switch (reactionType) {
+      case 'SMR':
+        if (isReversible) {
+          equation = r'r_{SMR} = \frac{k_{SMR} \cdot \left(P_{CH_4} \cdot P_{H_2O} - \frac{P_{CO} \cdot P_{H_2}^3}{K_{eq}} \right)}{\left(1 + K_{CH_4, SMR} \cdot P_{CH_4} + K_{H_2O, SMR} \cdot P_{H_2O}\right)}';
+        } else {
+          equation = r'r_{SMR} = \frac{k_{SMR} \cdot P_{CH_4} \cdot P_{H_2O}}{\left(1 + K_{CH_4, SMR} \cdot P_{CH_4} + K_{H_2O, SMR} \cdot P_{H_2O}\right)}';
+        }
+        break;
+      case 'WGS':
+        if (isReversible) {
+          equation = r'r_{WGS} = \frac{k_{WGS} \cdot \left(P_{CO} \cdot P_{H_2O} - \frac{P_{CO_2} \cdot P_{H_2}}{K_{eq}} \right)}{\left(1 + K_{CO, WGS} \cdot P_{CO} + K_{H_2O, WGS} \cdot P_{H_2O}\right)}';
+        } else {
+          equation = r'r_{WGS} = \frac{k_{WGS} \cdot P_{CO} \cdot P_{H_2O}}{\left(1 + K_{CO, WGS} \cdot P_{CO} + K_{H_2O, WGS} \cdot P_{H_2O}\right)}';
+        }
+        break;
+      case 'DRM':
+      default:
+        if (isReversible) {
+          equation = r'r_{DRM} = \frac{k_{DRM} \cdot \left(P_{CH_4} \cdot P_{CO_2} - \frac{P_{CO}^2 \cdot P_{H_2}^2}{K_{eq}} \right)}{\left(1 + K_{CH_4, DRM} \cdot P_{CH_4} + K_{CO_2, DRM} \cdot P_{CO_2}\right)}';
+        } else {
+          equation = r'r_{DRM} = \frac{k_{DRM} \cdot P_{CH_4} \cdot P_{CO_2}}{\left(1 + K_{CH_4, DRM} \cdot P_{CH_4} + K_{CO_2, DRM} \cdot P_{CO_2}\right)}';
+        }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: KineticsConstants.equationBoxDecoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Math.tex(
+            equation,
+            textStyle: const TextStyle(fontSize: 18),
+          ),
+          const SizedBox(height: 12),
+          Math.tex(
+            r'k_{' + reactionType + r'} = A_{' + reactionType + r'} \cdot \exp \left( \frac{-E_{' + reactionType + r'}}{R \cdot T} \right)',
+            textStyle: const TextStyle(fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget buildParameterFields() {
+    // Define adsorption constants based on reaction type
+    List<String> adsorptionConstants = [];
+    switch (reactionType) {
+      case 'SMR':
+        adsorptionConstants = ['K_{CH_4, SMR}', 'K_{H_2O, SMR}'];
+        break;
+      case 'WGS':
+        adsorptionConstants = ['K_{CO, WGS}', 'K_{H_2O, WGS}'];
+        break;
+      case 'DRM':
+      default:
+        adsorptionConstants = ['K_{CH_4, DRM}', 'K_{CO_2, DRM}'];
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Text('Eley-Rideal Parameters for $reactionType:', style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                decoration: InputDecoration(
+                  labelText: 'A_$reactionType',
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                decoration: InputDecoration(
+                  labelText: 'E_$reactionType',
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                decoration: InputDecoration(
+                  labelText: adsorptionConstants[0],
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                decoration: InputDecoration(
+                  labelText: adsorptionConstants[1],
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+            ),
+          ],
+        ),
+        if (isReversible) ...[
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'K_eq',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+              ),
+              const Spacer(),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,92 +156,7 @@ class EleyRidealModel extends StatelessWidget implements KineticsModel {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         buildRateEquation(),
-        const SizedBox(height: 24),
         buildParameterFields(),
-      ],
-    );
-  }
-
-  @override
-  Widget buildRateEquation() {
-    final String latex = isReversible
-        ? r'r = \frac{A e^{\frac{-E}{RT}} K_{CH_4} \left( [CH_4][CO_2] - \frac{[H_2]^2[CO]^2}{K_p} \right)}{1 + K_{CH_4}[CH_4]}'
-        : r'r = \frac{A e^{\frac{-E}{RT}} \cdot [CH_4] \cdot [CO_2]}{1 + K_{CH_4} \cdot [CH_4]}';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Math.tex(
-          latex,
-          textStyle: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w500,
-          ),
-          mathStyle: MathStyle.display,
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget buildParameterFields() {
-    final List<Map<String, String>> fields = isReversible
-        ? [
-            {'label': 'A', 'hint': 'Pre-exponential factor'},
-            {'label': 'E', 'hint': 'Activation energy (J/mol)'},
-            {'label': 'K₍CH₄₎', 'hint': 'Adsorption constant for CH₄'},
-            {'label': 'Kₚ', 'hint': 'Equilibrium constant'},
-          ]
-        : [
-            {'label': 'A', 'hint': 'Pre-exponential factor'},
-            {'label': 'E', 'hint': 'Activation energy (J/mol)'},
-            {'label': 'K₍CH₄₎', 'hint': 'Adsorption constant for CH₄'},
-          ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Kinetic Parameters:',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: fields
-              .map(
-                (field) => SizedBox(
-                  width: 180,
-                  child: TextField(
-                    decoration: InputDecoration(
-                      labelText: field['label'],
-                      hintText: field['hint'],
-                      border: const OutlineInputBorder(),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
       ],
     );
   }

@@ -1,14 +1,140 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'kinetics_model.dart';
+import '../../../../constants/kinetics_constants.dart';
 
 class PowerLawModel extends StatelessWidget implements KineticsModel {
   final bool isReversible;
-  
+  final String reactionType;
+
   const PowerLawModel({
     super.key,
     required this.isReversible,
+    required this.reactionType,
   });
+
+  @override
+  Widget buildRateEquation() {
+    String equation;
+    switch (reactionType) {
+      case 'SMR':
+        if (isReversible) {
+          equation = r'r_{SMR} = k_{SMR} \cdot \left(P_{CH_4}^{\alpha} \cdot P_{H_2O}^{\beta} - \frac{P_{CO} \cdot P_{H_2}^3}{K_{eq}} \right)';
+        } else {
+          equation = r'r_{SMR} = k_{SMR} \cdot P_{CH_4}^{\alpha} \cdot P_{H_2O}^{\beta}';
+        }
+        break;
+      case 'WGS':
+        if (isReversible) {
+          equation = r'r_{WGS} = k_{WGS} \cdot \left(P_{CO}^{\alpha} \cdot P_{H_2O}^{\beta} - \frac{P_{CO_2} \cdot P_{H_2}}{K_{eq}} \right)';
+        } else {
+          equation = r'r_{WGS} = k_{WGS} \cdot P_{CO}^{\alpha} \cdot P_{H_2O}^{\beta}';
+        }
+        break;
+      case 'DRM':
+      default:
+        if (isReversible) {
+          equation = r'r_{DRM} = k_{DRM} \cdot \left(P_{CH_4}^{\alpha} \cdot P_{CO_2}^{\beta} - \frac{P_{CO}^2 \cdot P_{H_2}^2}{K_{eq}} \right)';
+        } else {
+          equation = r'r_{DRM} = k_{DRM} \cdot P_{CH_4}^{\alpha} \cdot P_{CO_2}^{\beta}';
+        }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: KineticsConstants.equationBoxDecoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Math.tex(
+            equation,
+            textStyle: const TextStyle(fontSize: 18),
+          ),
+          const SizedBox(height: 12),
+          Math.tex(
+            r'k_{' + reactionType + r'} = A_{' + reactionType + r'} \cdot \exp \left( \frac{-E_{' + reactionType + r'}}{R \cdot T} \right)',
+            textStyle: const TextStyle(fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget buildParameterFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Text('Power-Law Parameters for $reactionType:', style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                decoration: InputDecoration(
+                  labelText: 'A_$reactionType',
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                decoration: InputDecoration(
+                  labelText: 'E_$reactionType',
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'α',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'β',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+            ),
+          ],
+        ),
+        if (isReversible) ...[
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'K_eq',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+              ),
+              const Spacer(),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,96 +142,7 @@ class PowerLawModel extends StatelessWidget implements KineticsModel {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         buildRateEquation(),
-        const SizedBox(height: 24),
         buildParameterFields(),
-      ],
-    );
-  }
-
-  @override
-  Widget buildRateEquation() {
-    String latex = isReversible
-        ? r'r = A e^{\frac{-E}{RT}} \left( [CH_4]^m [CO_2]^n - \frac{[H_2]^p [CO]^q}{K_p} \right)'
-        : r'r = A e^{\frac{-E}{RT}} [CH_4]^m [CO_2]^n';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Math.tex(
-          latex,
-          textStyle: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w500,
-          ),
-          mathStyle: MathStyle.display,
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget buildParameterFields() {
-    final List<Map<String, String>> fields = isReversible
-        ? [
-            {'label': 'A', 'hint': 'Pre-exponential factor'},
-            {'label': 'E', 'hint': 'Activation energy (J/mol)'},
-            {'label': 'm', 'hint': 'CH₄ reaction order'},
-            {'label': 'n', 'hint': 'CO₂ reaction order'},
-            {'label': 'p', 'hint': 'H₂ reaction order'},
-            {'label': 'q', 'hint': 'CO reaction order'},
-            {'label': 'Kₚ', 'hint': 'Equilibrium constant'},
-          ]
-        : [
-            {'label': 'A', 'hint': 'Pre-exponential factor'},
-            {'label': 'E', 'hint': 'Activation energy (J/mol)'},
-            {'label': 'm', 'hint': 'CH₄ reaction order'},
-            {'label': 'n', 'hint': 'CO₂ reaction order'},
-          ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Kinetic Parameters:',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: fields
-              .map(
-                (field) => SizedBox(
-                  width: 180,
-                  child: TextField(
-                    decoration: InputDecoration(
-                      labelText: field['label'],
-                      hintText: field['hint'],
-                      border: const OutlineInputBorder(),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
       ],
     );
   }
