@@ -36,7 +36,7 @@ class _EleyRidealTabState extends State<EleyRidealTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Section: Kinetics
+            // Seleção de que reação o usuario quer fazer
             const Text(
               'Kinetics',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -77,7 +77,7 @@ class _EleyRidealTabState extends State<EleyRidealTab> {
 
             const SizedBox(height: 28),
             
-            // Selected formula display box
+            // Selecione a formula para exibir
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
@@ -109,7 +109,7 @@ class _EleyRidealTabState extends State<EleyRidealTab> {
 
             const SizedBox(height: 36),
             
-            // Section: Experimental Data
+            // Seleção: Dados Experimentais
             ExperimentalDataTable(
               dataRows: dataRows,
               onAddRow: () {
@@ -131,7 +131,7 @@ class _EleyRidealTabState extends State<EleyRidealTab> {
 
             const SizedBox(height: 30),
             
-            // Section: Estimation Method
+            // Seleção: Método de Estimativa
             const Text(
               'Estimation Method',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -154,7 +154,7 @@ class _EleyRidealTabState extends State<EleyRidealTab> {
 
             const SizedBox(height: 30),
             
-            // Section: Initial Search Domain
+            // Seleção: Intervalo de Busca Inicial
             const Text(
               'Initial Search Domain',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -193,7 +193,7 @@ class _EleyRidealTabState extends State<EleyRidealTab> {
 
             const SizedBox(height: 36),
             
-            // Run Button
+            // Botão para executar a estimativa
             Center(
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(

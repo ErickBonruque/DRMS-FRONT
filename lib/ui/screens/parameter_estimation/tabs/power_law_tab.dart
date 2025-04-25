@@ -38,11 +38,14 @@ class _PowerLawTabState extends State<PowerLawTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Título da seção
             const Text(
               'Kinetics',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
+
+            // Dropdown para seleção de fórmula
             DropdownButton<String>(
               value: selectedFormula,
               itemHeight: 80,
@@ -76,7 +79,8 @@ class _PowerLawTabState extends State<PowerLawTab> {
             ),
 
             const SizedBox(height: 28),
-            
+
+            // Exibição da fórmula selecionada
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
@@ -107,8 +111,8 @@ class _PowerLawTabState extends State<PowerLawTab> {
             ),
 
             const SizedBox(height: 36),
-            
-            // Section: Experimental Data
+
+            // Seção: Dados experimentais
             ExperimentalDataTable(
               dataRows: dataRows,
               onAddRow: () {
@@ -129,14 +133,14 @@ class _PowerLawTabState extends State<PowerLawTab> {
             ),
 
             const SizedBox(height: 30),
-            
-            // Section: Estimation Method
+
+            // Seção: Método de estimativa
             const Text(
               'Estimation Method',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            
+
             DropdownButton<String>(
               value: 'Particle Swarm',
               items: const [
@@ -152,14 +156,14 @@ class _PowerLawTabState extends State<PowerLawTab> {
             ),
 
             const SizedBox(height: 30),
-            
-            // Section: Initial Search Domain
+
+            // Seção: Domínio inicial de busca
             const Text(
               'Initial Search Domain',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            
+
             Card(
               elevation: 2,
               child: Padding(
@@ -179,8 +183,8 @@ class _PowerLawTabState extends State<PowerLawTab> {
             ),
 
             const SizedBox(height: 36),
-            
-            // Run Button
+
+            // Botão de execução
             Center(
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -188,12 +192,12 @@ class _PowerLawTabState extends State<PowerLawTab> {
                   textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () {
-                  // Execute estimation
+                  // Executar estimativa
                 },
                 child: const Text('Run'),
               ),
             ),
-            
+
             const SizedBox(height: 20),
           ],
         ),

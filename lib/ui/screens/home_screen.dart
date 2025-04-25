@@ -21,7 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   
   @override
   Widget build(BuildContext context) {
-    // Content to display based on selection
+    // Conteúdo a ser exibido com base na seleção
     Widget contentWidget;
     switch (_selectedIndex) {
       case 0:
@@ -43,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Row(
         children: [
-          // Fixed side navigation menu
+          // Menu de navegação lateral fixo
           NavigationRail(
             selectedIndex: _selectedIndex,
             onDestinationSelected: _onItemTapped,
@@ -64,10 +64,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           
-          // Vertical divider between menu and content
+          // Divisor vertical para separar o menu do conteúdo
           const VerticalDivider(thickness: 1, width: 1),
           
-          // Main content area
+          // Conteúdo principal
           Expanded(
             child: contentWidget,
           ),

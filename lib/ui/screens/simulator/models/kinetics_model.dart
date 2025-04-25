@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Abstract interface for all kinetics models
+/// Interface abstrata para os modelos de cinética
+/// que define os métodos necessários para construir
 abstract class KineticsModel {
-  /// Build the rate equation widget
+  /// Construir a equação de taxa
   Widget buildRateEquation();
   
-  /// Build the parameter fields widget
+  /// Contruir os campos de parâmetros
   Widget buildParameterFields();
 }

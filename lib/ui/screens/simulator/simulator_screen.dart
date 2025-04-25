@@ -13,7 +13,7 @@ class SimulatorScreen extends StatefulWidget {
 }
 
 class _SimulatorScreenState extends State<SimulatorScreen> {
-  // Default to 0 (inlet flows) when the page opens
+  // Por padrão o primeiro tab é o de Inlet Flows
   int _selectedIndex = 0;
 
   final List<Widget> _tabs = const [
@@ -42,7 +42,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Title bar for the selected page
+        // Titulo da aba selecionada
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: Text(

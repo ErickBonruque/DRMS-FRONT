@@ -11,7 +11,8 @@ class ParameterEstimationScreen extends StatefulWidget {
 }
 
 class _ParameterEstimationScreenState extends State<ParameterEstimationScreen> {
-  // Default to 0 (Potências) when the page opens
+  // Padrão igual a 0 para Power Law
+  // 1 para Eley-Rideal e 2 para Langmuir-Hinshelwood
   int _selectedIndex = 0;
 
   final List<Widget> _tabs = const [

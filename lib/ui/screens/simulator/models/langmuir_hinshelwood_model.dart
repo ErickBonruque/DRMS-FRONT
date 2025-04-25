@@ -67,7 +67,8 @@ class LangmuirHinshelwoodModel extends StatelessWidget implements KineticsModel 
 
   @override
   Widget buildParameterFields() {
-    // Define adsorption constants based on reaction type
+    // Define constantes para os parâmetros de adsorção
+    // e os produtos para cada tipo de reação
     List<String> reactants = [];
     List<String> products = [];
     

@@ -46,7 +46,7 @@ class _LangmuirHinshelwoodTabState extends State<LangmuirHinshelwoodTab> {
             DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: selectedFormula,
-                itemHeight: 80, // Add height for dropdown items
+                itemHeight: 80, // Adicionar altura para o item do dropdown
                 items: [
                   DropdownMenuItem(
                     value: 'Fórmula 1',
@@ -142,7 +142,7 @@ class _LangmuirHinshelwoodTabState extends State<LangmuirHinshelwoodTab> {
 
             const SizedBox(height: 36),
             
-            // Section: Experimental Data
+            // Seleção: Dados Experimentais
             ExperimentalDataTable(
               dataRows: dataRows,
               onAddRow: () {
@@ -164,7 +164,7 @@ class _LangmuirHinshelwoodTabState extends State<LangmuirHinshelwoodTab> {
 
             const SizedBox(height: 30),
             
-            // Section: Estimation Method
+            // Seleção: Método de Estimativa
             const Text(
               'Estimation Method',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -187,7 +187,7 @@ class _LangmuirHinshelwoodTabState extends State<LangmuirHinshelwoodTab> {
 
             const SizedBox(height: 30),
             
-            // Section: Initial Search Domain
+            // Seleção: Intervalo de Busca Inicial
             const Text(
               'Initial Search Domain',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -218,7 +218,7 @@ class _LangmuirHinshelwoodTabState extends State<LangmuirHinshelwoodTab> {
                       useMathText: true,
                     ),
                     
-                    // Add additional parameters based on the formula
+                    // Adicionar campos de entrada para K_{H_2} e K_{CO} se a fórmula selecionada for 2 ou 4
                     if (selectedFormula == 'Fórmula 2' || selectedFormula == 'Fórmula 4') ...[
                       const SizedBox(height: 16),
                       ParameterSearchRange(
@@ -252,7 +252,7 @@ class _LangmuirHinshelwoodTabState extends State<LangmuirHinshelwoodTab> {
 
             const SizedBox(height: 36),
             
-            // Run Button
+            // Botão para executar a estimativa
             Center(
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -260,7 +260,7 @@ class _LangmuirHinshelwoodTabState extends State<LangmuirHinshelwoodTab> {
                   textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () {
-                  // Execute estimation
+                  // deus abençoe quem vai fazer isso
                 },
                 child: const Text('Run'),
               ),

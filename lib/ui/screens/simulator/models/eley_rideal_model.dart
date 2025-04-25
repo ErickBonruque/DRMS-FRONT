@@ -62,7 +62,7 @@ class EleyRidealModel extends StatelessWidget implements KineticsModel {
 
   @override
   Widget buildParameterFields() {
-    // Define adsorption constants based on reaction type
+    // Define constantes de adsorção específicas para cada reação
     List<String> adsorptionConstants = [];
     switch (reactionType) {
       case 'SMR':

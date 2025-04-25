@@ -22,28 +22,28 @@ class _KineticsTabState extends State<KineticsTab> {
 
   String selectedRateUnit = KineticsConstants.rateUnits[0];
   
-  // Reaction selection state
+  // Seleção de que reação o usuario quer fazer
   Map<String, bool> selectedReactions = {
     'SMR': false,
-    'DRM': true,  // Default to DRM selected
+    'DRM': true,  // Por padrão, DRM está selecionada
     'WGS': false,
   };
 
-  // Reversibility state for each reaction
+  // Bagulho reversivel para cada reação
   Map<String, bool> isReversible = {
     'SMR': false,
     'DRM': false,
     'WGS': false,
   };
 
-  // Reaction equations in LaTeX
+  // Equações em LaTeX para cada reação
   final Map<String, String> reactionEquations = {
     'SMR': r'\text{CH}_4 + \text{H}_2\text{O} \rightleftharpoons \text{CO} + 3\text{H}_2',
     'DRM': r'\text{CH}_4 +\text{CO}_2 \rightleftharpoons 2\text{CO} + 2\text{H}_2',
     'WGS': r'\text{CO} +\text{H}_2\text{O} \rightleftharpoons \text{CO}_2 + \text{H}_2',
   };
 
-  // Reaction full names
+  // Reação nomes para exibição
   final Map<String, String> reactionNames = {
     'SMR': 'Steam Methane Reforming',
     'DRM': 'Dry Methane Reforming',
