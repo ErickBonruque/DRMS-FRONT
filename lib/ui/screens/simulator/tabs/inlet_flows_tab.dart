@@ -19,7 +19,7 @@ class _InletFlowsTabState extends State<InletFlowsTab> {
 
   String selectedUnitCH4 = 'm³/s';
   String selectedUnitCO2 = 'm³/s';
-  String selectedUnitH2O = 'm³/s'; // Adicionando variável para água
+  String selectedUnitH2O = 'm³/s';
   String selectedUnitPressure = 'bar';
 
   @override
