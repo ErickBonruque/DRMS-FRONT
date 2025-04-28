@@ -40,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('DRMS'),
+        elevation: _selectedIndex == 0 ? 0 : 4, // Remove elevation if in Simulator screen
       ),
       body: Row(
         children: [

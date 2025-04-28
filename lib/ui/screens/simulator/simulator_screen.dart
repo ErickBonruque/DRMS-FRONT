@@ -38,58 +38,103 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     });
   }
 
+  void _runSimulation() {
+    // Lógica para executar a simulação
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Starting simulation...')),
+    );
+  }
+
+  void _exportData() {
+    // Lógica para exportar os dados
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Exporting data...')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Titulo da aba selecionada
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Text(
-            _titles[_selectedIndex],
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          _titles[_selectedIndex],
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+        ),
+        centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ElevatedButton.icon(
+              onPressed: _runSimulation, 
+              icon: const Icon(Icons.play_arrow),
+              label: const Text("Run"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
+            ),
           ),
-        ),
-        // Main content
-        Expanded(
-          child: _tabs[_selectedIndex],
-        ),
-        // Bottom navigation
-        BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          type: BottomNavigationBarType.fixed, // Ensures all items are visible
-          selectedItemColor: Theme.of(context).primaryColor,
-          unselectedItemColor: Colors.grey,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.input),
-              label: 'Inlet',
-              tooltip: 'Inlet Flows',
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: ElevatedButton.icon(
+              onPressed: _exportData, 
+              icon: const Icon(Icons.download),
+              label: const Text("Export"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green.shade600,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.margin),
-              label: 'Reactor',
-              tooltip: 'Reactor Properties',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.science),
-              label: 'Kinetics',
-              tooltip: 'Reaction Kinetics',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.thermostat),
-              label: 'Heat',
-              tooltip: 'Heat Transfer',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.play_circle_filled),
-              label: 'Simulate',
-              tooltip: 'Run Simulation',
-            ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Main content
+          Expanded(
+            child: _tabs[_selectedIndex],
+          ),
+          // Bottom navigation
+          BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            type: BottomNavigationBarType.fixed, // Ensures all items are visible
+            selectedItemColor: Theme.of(context).primaryColor,
+            unselectedItemColor: Colors.grey,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.input),
+                label: 'Inlet',
+                tooltip: 'Inlet Flows',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.margin),
+                label: 'Reactor',
+                tooltip: 'Reactor Properties',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.science),
+                label: 'Kinetics',
+                tooltip: 'Reaction Kinetics',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.thermostat),
+                label: 'Heat',
+                tooltip: 'Heat Transfer',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.play_circle_filled),
+                label: 'Simulate',
+                tooltip: 'Run Simulation',
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
