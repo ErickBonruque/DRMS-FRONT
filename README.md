@@ -1,7 +1,7 @@
 # DRMS - Projeto de Iniciação Científica
 
 ## Sobre o Projeto
-Este é um projeto de Iniciação Científica orientado pelo Prof. Dr. Evandro Alves Nakajima.
+Este é o frontend de um projeto de Iniciação Científica orientado pelo Prof. Dr. Evandro Alves Nakajima.
 
 ## Aluno
 Erick Bonrquue

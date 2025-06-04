@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http; // Added import for http package
+import 'dart:convert';
+import 'dart:math';
 import 'tabs/inlet_flows_tab.dart';
 import 'tabs/reactor_tab.dart';
 import 'tabs/kinetics_tab.dart';
 import 'tabs/heat_tab.dart';
 import 'tabs/simulate_tab.dart';
+import 'tabs/results_tab.dart';
 
 class SimulatorScreen extends StatefulWidget {
   const SimulatorScreen({super.key});
@@ -16,12 +20,13 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
   // Por padrão o primeiro tab é o de Inlet Flows
   int _selectedIndex = 0;
 
-  final List<Widget> _tabs = const [
-    InletFlowsTab(),
-    ReactorTab(),
-    KineticsTab(),
-    HeatTab(),
-    SimulateTab(),
+  List<Widget> get _tabs => [
+    const InletFlowsTab(),
+    const ReactorTab(),
+    const KineticsTab(),
+    const HeatTab(),
+    const SimulateTab(),
+    ResultsTab(simulationResults: simulationResults, isLoading: isLoading),
   ];
 
   final List<String> _titles = [
@@ -30,6 +35,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     'Kinetics',
     'Heat',
     'Simulate',
+    'Results',
   ];
 
   void _onItemTapped(int index) {
@@ -38,11 +44,78 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     });
   }
 
-  void _runSimulation() {
-    // Lógica para executar a simulação
+  // Store simulation results
+  Map<String, dynamic>? simulationResults;
+  bool isLoading = false;
+
+  void _runSimulation() async {
+    setState(() {
+      isLoading = true;
+    });
+    
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Starting simulation...')),
     );
+    
+    // Call the new results endpoint with n_chunks=5 (reduced for testing)
+    final url = Uri.parse('http://127.0.0.1:5000/results?n_chunks=5');
+    try {
+      print('Calling API at: $url');
+      final response = await http.get(url);
+      print('Response status code: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        print('Simulation data retrieved successfully.');
+        print('Response body length: ${response.body.length}');
+        print('Response body preview: ${response.body.substring(0, min(200, response.body.length))}');
+        
+        try {
+          // Parse the JSON response
+          final data = json.decode(response.body);
+          print('JSON decoded successfully. Keys: ${data.keys.toList()}');
+          
+          if (data.containsKey('CA_history')) {
+            print('CA_history found. Length: ${data['CA_history'].length}');
+            if (data['CA_history'].isNotEmpty) {
+              print('First iteration shape: ${data['CA_history'][0].length} x ${data['CA_history'][0][0].length}');
+            }
+          } else {
+            print('CA_history not found in response data');
+          }
+          
+          setState(() {
+            simulationResults = data;
+            isLoading = false;
+            // Navigate to the Results tab
+            _selectedIndex = 5; // Index of the Results tab
+          });
+        } catch (e) {
+          print('Error decoding JSON: $e');
+          setState(() {
+            isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error parsing response data: $e')),
+          );
+        }
+      } else {
+        print('Error retrieving simulation data: ${response.body}');
+        setState(() {
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: Failed to retrieve simulation data')),
+        );
+      }
+    } catch (e) {
+      print('Connection error: $e');
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   }
 
   void _exportData() {
@@ -54,6 +127,13 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Debug information
+    print('Building SimulatorScreen with _selectedIndex: $_selectedIndex');
+    print('simulationResults is ${simulationResults != null ? "not null" : "null"}');
+    if (simulationResults != null) {
+      print('simulationResults keys: ${simulationResults!.keys.toList()}');
+    }
+    
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -130,6 +210,11 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                 icon: Icon(Icons.play_circle_filled),
                 label: 'Simulate',
                 tooltip: 'Run Simulation',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.assessment),
+                label: 'Results',
+                tooltip: 'Simulation Results',
               ),
             ],
           ),
