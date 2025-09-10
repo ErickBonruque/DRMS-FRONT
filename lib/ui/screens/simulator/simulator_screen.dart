@@ -44,7 +44,6 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     });
   }
 
-  // Store simulation results
   Map<String, dynamic>? simulationResults;
   bool isLoading = false;
 
@@ -57,7 +56,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
       const SnackBar(content: Text('Starting simulation...')),
     );
     
-    // Call the new results endpoint with n_chunks=5 (reduced for testing)
+    // Chama a API para obter os resultados, n_chunks=5 para testes
     final url = Uri.parse('http://127.0.0.1:5000/results?n_chunks=5');
     try {
       print('Calling API at: $url');
@@ -70,7 +69,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
         print('Response body preview: ${response.body.substring(0, min(200, response.body.length))}');
         
         try {
-          // Parse the JSON response
+          // Decodifica a resposta JSON
           final data = json.decode(response.body);
           print('JSON decoded successfully. Keys: ${data.keys.toList()}');
           
@@ -86,8 +85,8 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
           setState(() {
             simulationResults = data;
             isLoading = false;
-            // Navigate to the Results tab
-            _selectedIndex = 5; // Index of the Results tab
+            // Navega para a aba de resultados
+            _selectedIndex = 5; 
           });
         } catch (e) {
           print('Error decoding JSON: $e');
