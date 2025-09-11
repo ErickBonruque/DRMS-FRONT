@@ -26,7 +26,12 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     const KineticsTab(),
     const HeatTab(),
     const SimulateTab(),
-    ResultsTab(simulationResults: simulationResults, isLoading: isLoading),
+    ResultsTab(
+      simulationResults: simulationResults, 
+      isLoading: isLoading,
+      onRunSimulation: _runSimulation,
+      onExportData: _exportData,
+    ),
   ];
 
   final List<String> _titles = [
@@ -57,7 +62,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     );
     
     // Chama a API para obter os resultados, n_chunks=5 para testes
-    final url = Uri.parse('http://127.0.0.1:5000/results?n_chunks=5');
+    final url = Uri.parse('http://127.0.0.1:5000/results?n_chunks=100');
     try {
       print('Calling API at: $url');
       final response = await http.get(url);
@@ -142,34 +147,67 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
         ),
         centerTitle: true,
-        actions: [
+        actions: _selectedIndex == 5 ? [
+          // Botões aparecem apenas na aba Results
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: ElevatedButton.icon(
-              onPressed: _runSimulation, 
-              icon: const Icon(Icons.play_arrow),
-              label: const Text("Run"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).primaryColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: ElevatedButton.icon(
+                onPressed: _runSimulation,
+                icon: const Icon(Icons.play_arrow),
+                label: const Text("Run"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
               ),
             ),
           ),
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: ElevatedButton.icon(
-              onPressed: _exportData, 
-              icon: const Icon(Icons.download),
-              label: const Text("Export"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green.shade600,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.shade600.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: ElevatedButton.icon(
+                onPressed: _exportData,
+                icon: const Icon(Icons.download),
+                label: const Text("Export"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
               ),
             ),
           ),
-        ],
+        ] : null,
       ),
       body: Column(
         children: [
