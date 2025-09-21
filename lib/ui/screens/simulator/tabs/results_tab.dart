@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../utils/interpolation_utils.dart';
+import '../widgets/heatmap_widget.dart';
+import '../widgets/temporal_heatmap_widget.dart';
 
 class ResultsTab extends StatefulWidget {
   final Map<String, dynamic>? simulationResults;
@@ -31,6 +33,8 @@ class _ResultsTabState extends State<ResultsTab> {
   List<dynamic>? _displayData;
   // Informações sobre interpolação para exibir aviso
   Map<String, dynamic>? _interpolationInfo;
+  // Controle de visualização: true = gráfico, false = tabela
+  bool _showChart = true;
 
   @override
   void initState() {
@@ -120,7 +124,42 @@ class _ResultsTabState extends State<ResultsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Array selector e Tempo na mesma linha
+          // Controles superiores
+          Row(
+            children: [
+              // Toggle entre gráfico e tabela
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(25),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildToggleButton(
+                      icon: Icons.show_chart,
+                      label: 'Gráfico',
+                      isSelected: _showChart,
+                      onTap: () => setState(() => _showChart = true),
+                    ),
+                    _buildToggleButton(
+                      icon: Icons.table_chart,
+                      label: 'Tabela',
+                      isSelected: !_showChart,
+                      onTap: () => setState(() => _showChart = false),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(width: 24),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Array selector e controles condicionais
           Row(
             children: [
               // Array selector
@@ -154,39 +193,70 @@ class _ResultsTabState extends State<ResultsTab> {
                 }).toList(),
               ),
               
-              const SizedBox(width: 32),
-              
-              // Seletor de tempo compacto
-              Text('Tempo (t):', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 200, 
-                child: TextField(
-                  controller: _timeController,
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                  ],
-                  decoration: InputDecoration(
-                    hintText: 'Ex: 4.3',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+              // Controles de tempo só aparecem no modo tabela
+              if (!_showChart) ...[
+                const SizedBox(width: 32),
+                
+                // Seletor de tempo compacto
+                Text('Tempo (t):', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 200, 
+                  child: TextField(
+                    controller: _timeController,
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
+                    decoration: InputDecoration(
+                      hintText: 'Ex: 4.3',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      suffixIcon: IconButton(
+                        icon: Icon(Icons.check, size: 18, color: Colors.green),
+                        onPressed: _updateTimeFromInput,
+                        tooltip: 'Aplicar tempo',
+                      ),
                     ),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    suffixIcon: IconButton(
-                      icon: Icon(Icons.check, size: 18, color: Colors.green),
-                      onPressed: _updateTimeFromInput,
-                      tooltip: 'Aplicar tempo',
-                    ),
+                    onSubmitted: (value) => _updateTimeFromInput(),
                   ),
-                  onSubmitted: (value) => _updateTimeFromInput(),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Range: 0-${iterations > 0 ? (iterations - 1) : 0}',
-                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-              ),
+                const SizedBox(width: 8),
+                Text(
+                  'Range: 0-${iterations > 0 ? (iterations - 1) : 0}',
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                ),
+              ],
+              
+              // Informação sobre modo gráfico
+              if (_showChart) ...[
+                const SizedBox(width: 32),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.timeline, size: 16, color: Colors.blue.shade700),
+                      SizedBox(width: 6),
+                      Text(
+                        'Visualizando toda evolução temporal',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
           
@@ -196,9 +266,11 @@ class _ResultsTabState extends State<ResultsTab> {
           
           // Display the array data
           Expanded(
-            child: _displayData != null 
-              ? _buildArrayDataDisplay(_displayData!)
-              : Center(child: Text('Nenhum dado disponível para este tempo')),
+            child: _showChart 
+              ? _buildTemporalChartView() 
+              : (_displayData != null 
+                  ? _buildArrayDataDisplay(_displayData!)
+                  : Center(child: Text('Nenhum dado disponível para este tempo'))),
           ),
         ],
       ),
@@ -520,6 +592,245 @@ class _ResultsTabState extends State<ResultsTab> {
         ],
       ),
     );
+  }
+  
+  /// Constrói botão toggle para alternar entre gráfico e tabela
+  Widget _buildToggleButton({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? Theme.of(context).primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? Colors.white : Colors.grey[600],
+            ),
+            SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey[600],
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  /// Constrói a visualização temporal (toda evolução do array)
+  Widget _buildTemporalChartView() {
+    try {
+      if (widget.simulationResults == null || 
+          !widget.simulationResults!.containsKey(_selectedArray)) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                'Array $_selectedArray não encontrado',
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        );
+      }
+
+      final arrayData = widget.simulationResults![_selectedArray];
+      if (arrayData is! List || arrayData.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                'Dados insuficientes para gerar gráfico temporal',
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        );
+      }
+
+      // Converter dados para formato temporal [tempo][linha][coluna]
+      List<List<List<double>>> timeSeriesData = [];
+      
+      for (int timeIndex = 0; timeIndex < arrayData.length; timeIndex++) {
+        final timeData = arrayData[timeIndex];
+        if (timeData is List && timeData.isNotEmpty) {
+          List<List<double>> spatialData = [];
+          
+          for (int row = 0; row < timeData.length; row++) {
+            final rowData = timeData[row];
+            if (rowData is List) {
+              List<double> doubleRow = [];
+              for (int col = 0; col < rowData.length; col++) {
+                final value = rowData[col];
+                if (value is num) {
+                  doubleRow.add(value.toDouble());
+                } else {
+                  doubleRow.add(0.0);
+                }
+              }
+              spatialData.add(doubleRow);
+            }
+          }
+          
+          if (spatialData.isNotEmpty) {
+            timeSeriesData.add(spatialData);
+          }
+        }
+      }
+      
+      if (timeSeriesData.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                'Não foi possível processar dados temporais',
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        );
+      }
+      
+      // Criar título personalizado
+      String chartTitle = _getChartTitle(_selectedArray);
+      
+      return TemporalHeatmapWidget(
+        timeSeriesData: timeSeriesData,
+        title: chartTitle,
+        arrayName: _selectedArray,
+      );
+      
+    } catch (e) {
+      print('Erro ao criar visualização temporal: $e');
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error, size: 64, color: Colors.red),
+            SizedBox(height: 16),
+            Text(
+              'Erro ao gerar gráfico temporal: $e',
+              style: TextStyle(fontSize: 16, color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  /// Constrói a visualização em gráfico (modo legado - um momento específico)
+  Widget _buildChartView(List<dynamic> data) {
+    try {
+      // Converter dados para o formato esperado pelo HeatmapWidget
+      List<List<double>> chartData = [];
+      
+      for (int i = 0; i < data.length; i++) {
+        final row = data[i];
+        if (row is List) {
+          List<double> doubleRow = [];
+          for (int j = 0; j < row.length; j++) {
+            final value = row[j];
+            if (value is num) {
+              doubleRow.add(value.toDouble());
+            } else {
+              doubleRow.add(0.0);
+            }
+          }
+          chartData.add(doubleRow);
+        }
+      }
+      
+      if (chartData.isEmpty || chartData[0].isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                'Dados insuficientes para gerar o gráfico',
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        );
+      }
+      
+      // Criar título personalizado baseado no array selecionado
+      String chartTitle = _getChartTitle(_selectedArray);
+      String subtitle = 'Tempo: $_selectedTime';
+      
+      return HeatmapWidget(
+        data: chartData,
+        title: chartTitle,
+        subtitle: subtitle,
+      );
+      
+    } catch (e) {
+      print('Erro ao criar visualização do gráfico: $e');
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error, size: 64, color: Colors.red),
+            SizedBox(height: 16),
+            Text(
+              'Erro ao gerar gráfico: $e',
+              style: TextStyle(fontSize: 16, color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+  }
+  
+  /// Gera título personalizado baseado no array selecionado
+  String _getChartTitle(String arrayName) {
+    switch (arrayName) {
+      case 'CA_history':
+        return 'Concentração de CA';
+      case 'CB_history':
+        return 'Concentração de CB';
+      case 'CC_history':
+        return 'Concentração de CC';
+      case 'CD_history':
+        return 'Concentração de CD';
+      case 'CE_history':
+        return 'Concentração de CE';
+      case 'CF_history':
+        return 'Concentração de CF';
+      case 'T_history':
+        return 'Temperatura';
+      default:
+        return arrayName.replaceAll('_', ' ').toUpperCase();
+    }
   }
   
   Widget _buildArrayDataDisplay(List<dynamic> data) {
