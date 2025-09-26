@@ -38,6 +38,14 @@ dependencies:
   fl_chart: ^0.65.0
   # HTTP requests
   http: ^1.1.0
+  # Screenshot capabilities
+  screenshot: ^2.3.0
+  # Path provider for file system access
+  path_provider: ^2.1.2
+  # Universal HTML for web file download
+  universal_html: ^2.2.4
+  # SharedPreferences for local storage
+  shared_preferences: ^2.2.3
 
 dev_dependencies:
   flutter_test:

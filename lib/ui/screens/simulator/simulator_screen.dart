@@ -8,6 +8,8 @@ import 'tabs/kinetics_tab.dart';
 import 'tabs/heat_tab.dart';
 import 'tabs/simulate_tab.dart';
 import 'tabs/results_tab.dart';
+import '../../../models/simulator_configuration.dart';
+import '../../../services/configuration_service.dart';
 
 class SimulatorScreen extends StatefulWidget {
   const SimulatorScreen({super.key});
@@ -51,6 +53,8 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
 
   Map<String, dynamic>? simulationResults;
   bool isLoading = false;
+  
+  final ConfigurationService _configService = ConfigurationService();
 
   void _runSimulation() async {
     setState(() {
@@ -129,6 +133,214 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     );
   }
 
+  void _saveConfiguration() async {
+    // Dialog para solicitar o nome da configuração
+    final nameController = TextEditingController();
+    
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.save, color: Colors.orange.shade600),
+            SizedBox(width: 8),
+            Text('Salvar Configuração'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Digite um nome para esta configuração:',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                labelText: 'Nome da Configuração',
+                hintText: 'Ex: Configuração Padrão',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.edit),
+              ),
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Esta configuração salvará todos os valores das abas Inlet, Reactor, Kinetics, Heat e Simulate.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              if (name.isNotEmpty) {
+                Navigator.of(context).pop(name);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+    
+    if (result != null && result.isNotEmpty) {
+      await _performSaveConfiguration(result);
+    }
+  }
+
+  Future<void> _performSaveConfiguration(String name) async {
+    try {
+      // Mostrar loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: Colors.orange.shade600),
+                SizedBox(height: 16),
+                Text('Salvando configuração...'),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Verificar se o nome já existe
+      final nameExists = await _configService.configurationNameExists(name);
+      
+      // Fechar loading dialog
+      if (mounted) Navigator.of(context).pop();
+      
+      bool shouldProceed = true;
+      
+      if (nameExists) {
+        // Mostrar dialog de confirmação para substituir
+        shouldProceed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.warning, color: Colors.amber.shade600),
+                SizedBox(width: 8),
+                Text('Configuração Existente'),
+              ],
+            ),
+            content: Text(
+              'Já existe uma configuração com o nome "$name". Deseja substituí-la?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade600,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text('Substituir'),
+              ),
+            ],
+          ),
+        ) ?? false;
+      }
+      
+      if (!shouldProceed) return;
+      
+      // Criar configuração (por agora com dados básicos - será expandido depois)
+      final config = SimulatorConfiguration(
+        id: _configService.generateConfigurationId(),
+        name: name,
+        createdAt: DateTime.now(),
+        inletFlows: InletFlowsConfig(), // TODO: Coletar dados reais das abas
+        reactor: ReactorConfig(),
+        kinetics: KineticsConfig(),
+        heat: HeatConfig(),
+        simulate: SimulateConfig(),
+      );
+      
+      // Salvar configuração
+      final success = await _configService.saveConfiguration(config);
+      
+      if (success) {
+        // Mostrar mensagem de sucesso
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text('Configuração "$name" salva com sucesso!'),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } else {
+        throw Exception('Falha ao salvar configuração');
+      }
+      
+    } catch (e) {
+      // Fechar loading dialog se ainda estiver aberto
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+      
+      print('Erro ao salvar configuração: $e');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text('Erro ao salvar configuração: $e'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Debug information
@@ -197,6 +409,35 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                 label: const Text("Export"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.orange.shade600.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: ElevatedButton.icon(
+                onPressed: _saveConfiguration,
+                icon: const Icon(Icons.save),
+                label: const Text("Salvar Config"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade600,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   elevation: 0,

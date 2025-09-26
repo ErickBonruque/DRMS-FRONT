@@ -3,6 +3,13 @@ import 'package:flutter/services.dart';
 import '../../../../utils/interpolation_utils.dart';
 import '../widgets/heatmap_widget.dart';
 import '../widgets/temporal_heatmap_widget.dart';
+import 'package:screenshot/screenshot.dart';
+import 'dart:typed_data';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:path_provider/path_provider.dart';
+import 'dart:io' as io;
+import 'package:universal_html/html.dart' as html;
 
 class ResultsTab extends StatefulWidget {
   final Map<String, dynamic>? simulationResults;
@@ -35,6 +42,8 @@ class _ResultsTabState extends State<ResultsTab> {
   Map<String, dynamic>? _interpolationInfo;
   // Controle de visualização: true = gráfico, false = tabela
   bool _showChart = true;
+  // Controller para captura de screenshot
+  final ScreenshotController _screenshotController = ScreenshotController();
 
   @override
   void initState() {
@@ -154,6 +163,12 @@ class _ResultsTabState extends State<ResultsTab> {
               ),
               
               const SizedBox(width: 24),
+              
+              // Botão de download (só aparece no modo gráfico)
+              if (_showChart) ...[
+                _buildDownloadButton(),
+                const SizedBox(width: 16),
+              ],
             ],
           ),
           
@@ -723,6 +738,7 @@ class _ResultsTabState extends State<ResultsTab> {
         timeSeriesData: timeSeriesData,
         title: chartTitle,
         arrayName: _selectedArray,
+        screenshotController: _screenshotController,
       );
       
     } catch (e) {
@@ -809,6 +825,184 @@ class _ResultsTabState extends State<ResultsTab> {
         ),
       );
     }
+  }
+
+  /// Constrói o botão de download para salvar o gráfico
+  Widget _buildDownloadButton() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.green.shade400, Colors.green.shade600],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.green.withOpacity(0.3),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(25),
+          onTap: _downloadChart,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.download,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                SizedBox(width: 6),
+                Text(
+                  'Salvar Gráfico PNG',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Captura e salva o gráfico como imagem
+  Future<void> _downloadChart() async {
+    try {
+      // Mostrar indicador de loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Capturando gráfico...'),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Capturar screenshot
+      final Uint8List? imageBytes = await _screenshotController.capture();
+      
+      // Fechar dialog de loading
+      if (mounted) Navigator.of(context).pop();
+
+      if (imageBytes == null) {
+        _showErrorMessage('Erro ao capturar o gráfico');
+        return;
+      }
+
+      // Salvar arquivo baseado na plataforma
+      await _saveImageFile(imageBytes);
+      
+      // Mostrar mensagem de sucesso
+      _showSuccessMessage('Gráfico salvo com sucesso!');
+      
+    } catch (e) {
+      // Fechar dialog de loading se ainda estiver aberto
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+      
+      print('Erro ao capturar gráfico: $e');
+      _showErrorMessage('Erro ao salvar gráfico: $e');
+    }
+  }
+
+  /// Salva o arquivo de imagem baseado na plataforma
+  Future<void> _saveImageFile(Uint8List imageBytes) async {
+    final String fileName = '${_selectedArray}_temporal_chart_${DateTime.now().millisecondsSinceEpoch}.png';
+    
+    try {
+      // Verificar se estamos rodando na web
+      if (kIsWeb) {
+        // Web platform
+        final blob = html.Blob([imageBytes]);
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.document.createElement('a') as html.AnchorElement
+          ..href = url
+          ..style.display = 'none'
+          ..download = fileName;
+        
+        html.document.body?.children.add(anchor);
+        anchor.click();
+        html.document.body?.children.remove(anchor);
+        html.Url.revokeObjectUrl(url);
+      } else {
+        // Desktop/Mobile platform
+        final directory = await getDownloadsDirectory() ?? 
+                         await getApplicationDocumentsDirectory();
+        
+        final file = io.File('${directory.path}/$fileName');
+        await file.writeAsBytes(imageBytes);
+        
+        print('Arquivo salvo em: ${file.path}');
+      }
+    } catch (e) {
+      throw Exception('Falha ao salvar arquivo: $e');
+    }
+  }
+
+  /// Mostra mensagem de sucesso
+  void _showSuccessMessage(String message) {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.white),
+            SizedBox(width: 8),
+            Text(message),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  /// Mostra mensagem de erro
+  void _showErrorMessage(String message) {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.error, color: Colors.white),
+            SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
   
   /// Gera título personalizado baseado no array selecionado

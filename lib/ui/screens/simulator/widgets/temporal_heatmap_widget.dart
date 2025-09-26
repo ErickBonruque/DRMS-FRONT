@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:screenshot/screenshot.dart';
 
 class TemporalHeatmapWidget extends StatefulWidget {
   final List<List<List<double>>> timeSeriesData; // [tempo][linha][coluna]
   final String title;
   final String arrayName;
+  final ScreenshotController? screenshotController;
   
   const TemporalHeatmapWidget({
     super.key,
     required this.timeSeriesData,
     required this.title,
     required this.arrayName,
+    this.screenshotController,
   });
 
   @override
@@ -32,13 +35,12 @@ class _TemporalHeatmapWidgetState extends State<TemporalHeatmapWidget> {
       );
     }
 
-    return Center(
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: 800, // Limita o tamanho máximo
-          maxHeight: 600,
-        ),
-        child: Card(
+    final Widget chartContent = Container(
+      constraints: BoxConstraints(
+        maxWidth: 800, // Limita o tamanho máximo
+        maxHeight: 600,
+      ),
+      child: Card(
           elevation: 8,
           shadowColor: Colors.black26,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -88,8 +90,20 @@ class _TemporalHeatmapWidgetState extends State<TemporalHeatmapWidget> {
             ),
           ),
         ),
-      ),
-    );
+      );
+
+    // Se um controller de screenshot foi fornecido, envolver o conteúdo
+    if (widget.screenshotController != null) {
+      return Center(
+        child: Screenshot(
+          controller: widget.screenshotController!,
+          child: chartContent,
+        ),
+      );
+    }
+    
+    // Caso contrário, retornar o conteúdo diretamente
+    return Center(child: chartContent);
   }
 
   Widget _buildHeader() {

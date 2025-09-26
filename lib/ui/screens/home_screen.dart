@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../screens/about_screen.dart';
 import '../screens/simulator/simulator_screen.dart';
 import '../screens/parameter_estimation/parameter_estimation_screen.dart';
+import '../screens/configuration_manager/configuration_manager_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -27,10 +28,16 @@ class _HomeScreenState extends State<HomeScreen> {
       case 0:
         contentWidget = const SimulatorScreen();
         break;
-      // case 1: Parameter Estimation temporariamente removido
-      //   contentWidget = const ParameterEstimationScreen();
-      //   break;
       case 1:
+        contentWidget = ConfigurationManagerScreen(
+          onNavigateToSimulator: () {
+            setState(() {
+              _selectedIndex = 0; // Volta para o Simulator
+            });
+          },
+        );
+        break;
+      case 2:
         contentWidget = const AboutScreen();
         break;
       default:
@@ -54,10 +61,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icon(Icons.play_circle_filled),
                 label: Text('Simulator'),
               ),
-              // NavigationRailDestination( // Parameter Estimation temporariamente removido
-              //   icon: Icon(Icons.tune),
-              //   label: Text('Parameter Estimation'),
-              // ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings_applications),
+                label: Text('Configurações'),
+              ),
               NavigationRailDestination(
                 icon: Icon(Icons.info_outline),
                 label: Text('About'),
