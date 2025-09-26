@@ -155,78 +155,169 @@ class ReactorConfig {
 
 /// Configurações da aba Kinetics
 class KineticsConfig {
-  final Map<String, String> parameters;
-  final Map<String, bool> enabledReactions;
+  // Reações selecionadas
+  final Map<String, bool> selectedReactions;
+  // Modelos cinéticos para cada reação
+  final Map<String, String> selectedKineticsForReaction;
+  // Reversibilidade para cada reação
+  final Map<String, bool> isReversible;
+  // Unidade de taxa selecionada
+  final String selectedRateUnit;
+  // Parâmetros dos modelos (A_SMR, E_SMR, etc.)
+  final Map<String, String> modelParameters;
 
   KineticsConfig({
-    Map<String, String>? parameters,
-    Map<String, bool>? enabledReactions,
-  }) : parameters = parameters ?? {},
-       enabledReactions = enabledReactions ?? {};
+    Map<String, bool>? selectedReactions,
+    Map<String, String>? selectedKineticsForReaction,
+    Map<String, bool>? isReversible,
+    this.selectedRateUnit = 'mol/kgₐₜₐₗ·h',
+    Map<String, String>? modelParameters,
+  }) : selectedReactions = selectedReactions ?? {
+         'SMR': false,
+         'DRM': true,
+         'WGS': false,
+       },
+       selectedKineticsForReaction = selectedKineticsForReaction ?? {
+         'SMR': 'Power-Law',
+         'DRM': 'Power-Law',
+         'WGS': 'Power-Law',
+       },
+       isReversible = isReversible ?? {
+         'SMR': false,
+         'DRM': false,
+         'WGS': false,
+       },
+       modelParameters = modelParameters ?? {};
 
   Map<String, dynamic> toJson() {
     return {
-      'parameters': parameters,
-      'enabledReactions': enabledReactions,
+      'selectedReactions': selectedReactions,
+      'selectedKineticsForReaction': selectedKineticsForReaction,
+      'isReversible': isReversible,
+      'selectedRateUnit': selectedRateUnit,
+      'modelParameters': modelParameters,
     };
   }
 
   factory KineticsConfig.fromJson(Map<String, dynamic> json) {
     return KineticsConfig(
-      parameters: Map<String, String>.from(json['parameters'] ?? {}),
-      enabledReactions: Map<String, bool>.from(json['enabledReactions'] ?? {}),
+      selectedReactions: Map<String, bool>.from(json['selectedReactions'] ?? {
+        'SMR': false,
+        'DRM': true,
+        'WGS': false,
+      }),
+      selectedKineticsForReaction: Map<String, String>.from(json['selectedKineticsForReaction'] ?? {
+        'SMR': 'Power-Law',
+        'DRM': 'Power-Law',
+        'WGS': 'Power-Law',
+      }),
+      isReversible: Map<String, bool>.from(json['isReversible'] ?? {
+        'SMR': false,
+        'DRM': false,
+        'WGS': false,
+      }),
+      selectedRateUnit: json['selectedRateUnit'] ?? 'mol/kgₐₜₐₗ·h',
+      modelParameters: Map<String, String>.from(json['modelParameters'] ?? {}),
     );
   }
 }
 
 /// Configurações da aba Heat
 class HeatConfig {
-  final Map<String, String> heatParameters;
-  final Map<String, bool> heatOptions;
+  // Valores dos campos
+  final String overallHeatTransferCoeff;
+  final String inletTemperature;
+  final String externalTemperature;
+  
+  // Unidades selecionadas
+  final String selectedInletTempUnit;
+  final String selectedExternalTempUnit;
 
   HeatConfig({
-    Map<String, String>? heatParameters,
-    Map<String, bool>? heatOptions,
-  }) : heatParameters = heatParameters ?? {},
-       heatOptions = heatOptions ?? {};
+    this.overallHeatTransferCoeff = '',
+    this.inletTemperature = '',
+    this.externalTemperature = '',
+    this.selectedInletTempUnit = 'K',
+    this.selectedExternalTempUnit = 'K',
+  });
 
   Map<String, dynamic> toJson() {
     return {
-      'heatParameters': heatParameters,
-      'heatOptions': heatOptions,
+      'overallHeatTransferCoeff': overallHeatTransferCoeff,
+      'inletTemperature': inletTemperature,
+      'externalTemperature': externalTemperature,
+      'selectedInletTempUnit': selectedInletTempUnit,
+      'selectedExternalTempUnit': selectedExternalTempUnit,
     };
   }
 
   factory HeatConfig.fromJson(Map<String, dynamic> json) {
     return HeatConfig(
-      heatParameters: Map<String, String>.from(json['heatParameters'] ?? {}),
-      heatOptions: Map<String, bool>.from(json['heatOptions'] ?? {}),
+      overallHeatTransferCoeff: json['overallHeatTransferCoeff'] ?? '',
+      inletTemperature: json['inletTemperature'] ?? '',
+      externalTemperature: json['externalTemperature'] ?? '',
+      selectedInletTempUnit: json['selectedInletTempUnit'] ?? 'K',
+      selectedExternalTempUnit: json['selectedExternalTempUnit'] ?? 'K',
     );
   }
 }
 
 /// Configurações da aba Simulate
 class SimulateConfig {
+  // Termos do balanço de massa
+  final Map<String, bool> massBalanceTerms;
+  // Termos do balanço de energia
+  final Map<String, bool> energyBalanceTerms;
+  // Parâmetros de simulação adicionais
   final Map<String, String> simulationParameters;
-  final Map<String, bool> simulationOptions;
 
   SimulateConfig({
+    Map<String, bool>? massBalanceTerms,
+    Map<String, bool>? energyBalanceTerms,
     Map<String, String>? simulationParameters,
-    Map<String, bool>? simulationOptions,
-  }) : simulationParameters = simulationParameters ?? {},
-       simulationOptions = simulationOptions ?? {};
+  }) : massBalanceTerms = massBalanceTerms ?? {
+         'Accumulation Rate': true,
+         'Convection': true,
+         'Axial Diffusion': true,
+         'Reaction': true,
+         'Radial Diffusion': false,
+       },
+       energyBalanceTerms = energyBalanceTerms ?? {
+         'Accumulation Rate': true,
+         'Convection': true,
+         'Axial Diffusion': true,
+         'Reaction': true,
+         'Radial Diffusion': false,
+         'Heat Transfer': true,
+       },
+       simulationParameters = simulationParameters ?? {};
 
   Map<String, dynamic> toJson() {
     return {
+      'massBalanceTerms': massBalanceTerms,
+      'energyBalanceTerms': energyBalanceTerms,
       'simulationParameters': simulationParameters,
-      'simulationOptions': simulationOptions,
     };
   }
 
   factory SimulateConfig.fromJson(Map<String, dynamic> json) {
     return SimulateConfig(
+      massBalanceTerms: Map<String, bool>.from(json['massBalanceTerms'] ?? {
+        'Accumulation Rate': true,
+        'Convection': true,
+        'Axial Diffusion': true,
+        'Reaction': true,
+        'Radial Diffusion': false,
+      }),
+      energyBalanceTerms: Map<String, bool>.from(json['energyBalanceTerms'] ?? {
+        'Accumulation Rate': true,
+        'Convection': true,
+        'Axial Diffusion': true,
+        'Reaction': true,
+        'Radial Diffusion': false,
+        'Heat Transfer': true,
+      }),
       simulationParameters: Map<String, String>.from(json['simulationParameters'] ?? {}),
-      simulationOptions: Map<String, bool>.from(json['simulationOptions'] ?? {}),
     );
   }
 }

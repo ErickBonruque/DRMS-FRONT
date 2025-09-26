@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
+import '../../../../models/simulator_configuration.dart';
 
 class SimulateTab extends StatefulWidget {
-  const SimulateTab({super.key});
+  final SimulateConfig? initialConfig;
+  final Function(SimulateConfig)? onConfigChanged;
+  
+  const SimulateTab({
+    super.key,
+    this.initialConfig,
+    this.onConfigChanged,
+  });
 
   @override
   State<SimulateTab> createState() => _SimulateTabState();
@@ -61,6 +69,104 @@ class _SimulateTabState extends State<SimulateTab> {
     },
   };
 
+  // Controllers para os campos de texto
+  late TextEditingController _minTimeStepController;
+  late TextEditingController _maxTimeStepController;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Inicializar controllers
+    _minTimeStepController = TextEditingController();
+    _maxTimeStepController = TextEditingController();
+    
+    // Carregar configuração inicial se fornecida
+    if (widget.initialConfig != null) {
+      _loadConfiguration(widget.initialConfig!);
+    }
+    
+    // Adicionar listeners para notificar mudanças
+    _minTimeStepController.addListener(_notifyConfigChanged);
+    _maxTimeStepController.addListener(_notifyConfigChanged);
+  }
+
+  @override
+  void dispose() {
+    _minTimeStepController.dispose();
+    _maxTimeStepController.dispose();
+    super.dispose();
+  }
+
+  void _loadConfiguration(SimulateConfig config) {
+    setState(() {
+      // Carregar termos do balanço de massa
+      config.massBalanceTerms.forEach((term, selected) {
+        if (massBalanceTerms.containsKey(term)) {
+          massBalanceTerms[term]!['selected'] = selected;
+        }
+      });
+      
+      // Carregar termos do balanço de energia  
+      config.energyBalanceTerms.forEach((term, selected) {
+        if (energyBalanceTerms.containsKey(term)) {
+          energyBalanceTerms[term]!['selected'] = selected;
+        }
+      });
+      
+      // Carregar parâmetros de simulação
+      _minTimeStepController.text = config.simulationParameters['minTimeStep'] ?? '';
+      _maxTimeStepController.text = config.simulationParameters['maxTimeStep'] ?? '';
+    });
+  }
+
+  void _notifyConfigChanged() {
+    if (widget.onConfigChanged != null) {
+      final config = _getCurrentConfiguration();
+      widget.onConfigChanged!(config);
+    }
+  }
+
+  SimulateConfig _getCurrentConfiguration() {
+    // Coletar termos do balanço de massa
+    final Map<String, bool> massBalance = {};
+    massBalanceTerms.forEach((term, data) {
+      massBalance[term] = data['selected'] as bool;
+    });
+    
+    // Coletar termos do balanço de energia
+    final Map<String, bool> energyBalance = {};
+    energyBalanceTerms.forEach((term, data) {
+      energyBalance[term] = data['selected'] as bool;
+    });
+    
+    // Coletar parâmetros de simulação
+    final Map<String, String> simParams = {
+      'minTimeStep': _minTimeStepController.text,
+      'maxTimeStep': _maxTimeStepController.text,
+    };
+
+    return SimulateConfig(
+      massBalanceTerms: massBalance,
+      energyBalanceTerms: energyBalance,
+      simulationParameters: simParams,
+    );
+  }
+
+  void _onMassBalanceTermChanged(String term, bool? value) {
+    setState(() {
+      massBalanceTerms[term]!['selected'] = value ?? false;
+    });
+    _notifyConfigChanged();
+  }
+
+  void _onEnergyBalanceTermChanged(String term, bool? value) {
+    setState(() {
+      energyBalanceTerms[term]!['selected'] = value ?? false;
+    });
+    _notifyConfigChanged();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -83,9 +189,21 @@ class _SimulateTabState extends State<SimulateTab> {
   Widget _buildTimeStepsRow() {
     return Row(
       children: [
-        Expanded(child: TextField(decoration: const InputDecoration(labelText: 'Minimum time step'))),
+        Expanded(
+          child: TextField(
+            controller: _minTimeStepController,
+            decoration: const InputDecoration(labelText: 'Minimum time step'),
+            keyboardType: TextInputType.number,
+          ),
+        ),
         const SizedBox(width: 24),
-        Expanded(child: TextField(decoration: const InputDecoration(labelText: 'Maximum time step'))),
+        Expanded(
+          child: TextField(
+            controller: _maxTimeStepController,
+            decoration: const InputDecoration(labelText: 'Maximum time step'),
+            keyboardType: TextInputType.number,
+          ),
+        ),
       ],
     );
   }
@@ -111,11 +229,7 @@ class _SimulateTabState extends State<SimulateTab> {
               entry.key, 
               entry.value['equation'], 
               entry.value['selected'],
-              (value) {
-                setState(() {
-                  terms[entry.key]!['selected'] = value!;
-                });
-              },
+              title,
             )),
           ],
         ),
@@ -123,14 +237,20 @@ class _SimulateTabState extends State<SimulateTab> {
     );
   }
 
-  Widget _buildEquationCheckbox(String term, String equation, bool isSelected, Function(bool?) onChanged) {
+  Widget _buildEquationCheckbox(String term, String equation, bool isSelected, String balanceType) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
           Checkbox(
             value: isSelected,
-            onChanged: onChanged,
+            onChanged: (value) {
+              if (balanceType == 'Mass Balance') {
+                _onMassBalanceTermChanged(term, value);
+              } else {
+                _onEnergyBalanceTermChanged(term, value);
+              }
+            },
           ),
           const SizedBox(width: 8),
           Expanded(

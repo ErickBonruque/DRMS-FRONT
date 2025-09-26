@@ -12,7 +12,14 @@ import '../../../models/simulator_configuration.dart';
 import '../../../services/configuration_service.dart';
 
 class SimulatorScreen extends StatefulWidget {
-  const SimulatorScreen({super.key});
+  final SimulatorConfiguration? initialConfiguration;
+  final VoidCallback? onConfigurationLoaded;
+  
+  const SimulatorScreen({
+    super.key,
+    this.initialConfiguration,
+    this.onConfigurationLoaded,
+  });
 
   @override
   State<SimulatorScreen> createState() => _SimulatorScreenState();
@@ -23,11 +30,36 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
   int _selectedIndex = 0;
 
   List<Widget> get _tabs => [
-    const InletFlowsTab(),
-    const ReactorTab(),
-    const KineticsTab(),
-    const HeatTab(),
-    const SimulateTab(),
+    InletFlowsTab(
+      initialConfig: _inletFlowsConfig,
+      onConfigChanged: (config) {
+        _inletFlowsConfig = config;
+      },
+    ),
+    ReactorTab(
+      initialConfig: _reactorConfig,
+      onConfigChanged: (config) {
+        _reactorConfig = config;
+      },
+    ),
+    KineticsTab(
+      initialConfig: _kineticsConfig,
+      onConfigChanged: (config) {
+        _kineticsConfig = config;
+      },
+    ),
+    HeatTab(
+      initialConfig: _heatConfig,
+      onConfigChanged: (config) {
+        _heatConfig = config;
+      },
+    ),
+    SimulateTab(
+      initialConfig: _simulateConfig,
+      onConfigChanged: (config) {
+        _simulateConfig = config;
+      },
+    ),
     ResultsTab(
       simulationResults: simulationResults, 
       isLoading: isLoading,
@@ -55,6 +87,38 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
   bool isLoading = false;
   
   final ConfigurationService _configService = ConfigurationService();
+  
+  // Configurações das abas
+  InletFlowsConfig _inletFlowsConfig = InletFlowsConfig();
+  ReactorConfig _reactorConfig = ReactorConfig();
+  KineticsConfig _kineticsConfig = KineticsConfig();
+  HeatConfig _heatConfig = HeatConfig();
+  SimulateConfig _simulateConfig = SimulateConfig();
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Carregar configuração inicial se fornecida
+    if (widget.initialConfiguration != null) {
+      print('SimulatorScreen: Carregando configuração inicial: ${widget.initialConfiguration!.name}');
+      // Carregar imediatamente para garantir que os dados estejam disponíveis
+      loadConfiguration(widget.initialConfiguration!);
+      
+      // Usar addPostFrameCallback para garantir que a interface seja atualizada após a construção
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            // Força uma reconstrução após o carregamento
+          });
+        }
+        
+        if (widget.onConfigurationLoaded != null) {
+          widget.onConfigurationLoaded!();
+        }
+      });
+    }
+  }
 
   void _runSimulation() async {
     setState(() {
@@ -273,16 +337,16 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
       
       if (!shouldProceed) return;
       
-      // Criar configuração (por agora com dados básicos - será expandido depois)
+      // Criar configuração com dados atuais das abas
       final config = SimulatorConfiguration(
         id: _configService.generateConfigurationId(),
         name: name,
         createdAt: DateTime.now(),
-        inletFlows: InletFlowsConfig(), // TODO: Coletar dados reais das abas
-        reactor: ReactorConfig(),
-        kinetics: KineticsConfig(),
-        heat: HeatConfig(),
-        simulate: SimulateConfig(),
+        inletFlows: _inletFlowsConfig,
+        reactor: _reactorConfig,
+        kinetics: _kineticsConfig,
+        heat: _heatConfig,
+        simulate: _simulateConfig,
       );
       
       // Salvar configuração
@@ -303,8 +367,13 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
                 ],
               ),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
+              duration: Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                bottom: 80, // Posiciona mais acima da parte inferior
+                left: 16,
+                right: 16,
+              ),
             ),
           );
         }
@@ -333,12 +402,34 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
               ],
             ),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 4),
+            duration: Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              bottom: 80, // Posiciona mais acima da parte inferior
+              left: 16,
+              right: 16,
+            ),
           ),
         );
       }
     }
+  }
+
+  /// Método público para carregar uma configuração específica
+  void loadConfiguration(SimulatorConfiguration config) {
+    print('loadConfiguration: Iniciando carregamento da configuração "${config.name}"');
+    print('loadConfiguration: InletFlows - Metano: ${config.inletFlows.methanFlow}');
+    
+    setState(() {
+      _inletFlowsConfig = config.inletFlows;
+      _reactorConfig = config.reactor;
+      _kineticsConfig = config.kinetics;
+      _heatConfig = config.heat;
+      _simulateConfig = config.simulate;
+    });
+    
+    print('loadConfiguration: Configuração "${config.name}" carregada com sucesso');
+    print('loadConfiguration: Estado atualizado - InletFlows metano: ${_inletFlowsConfig.methanFlow}');
   }
 
   @override

@@ -6,11 +6,13 @@ import '../../../../constants/kinetics_constants.dart';
 class EleyRidealModel extends StatelessWidget implements KineticsModel {
   final bool isReversible;
   final String reactionType;
+  final Map<String, TextEditingController>? controllers;
 
   const EleyRidealModel({
     super.key, 
     required this.isReversible,
     required this.reactionType,
+    this.controllers,
   });
 
   @override
@@ -86,6 +88,7 @@ class EleyRidealModel extends StatelessWidget implements KineticsModel {
           children: [
             Expanded(
               child: TextFormField(
+                controller: controllers?['A_$reactionType'],
                 decoration: InputDecoration(
                   labelText: 'A_$reactionType',
                   border: const OutlineInputBorder(),
@@ -96,6 +99,7 @@ class EleyRidealModel extends StatelessWidget implements KineticsModel {
             const SizedBox(width: 16),
             Expanded(
               child: TextFormField(
+                controller: controllers?['E_$reactionType'],
                 decoration: InputDecoration(
                   labelText: 'E_$reactionType',
                   border: const OutlineInputBorder(),
@@ -110,6 +114,7 @@ class EleyRidealModel extends StatelessWidget implements KineticsModel {
           children: [
             Expanded(
               child: TextFormField(
+                controller: controllers?[adsorptionConstants[0].replaceAll(RegExp(r'[{}]'), '')],
                 decoration: InputDecoration(
                   labelText: adsorptionConstants[0],
                   border: const OutlineInputBorder(),
@@ -120,6 +125,7 @@ class EleyRidealModel extends StatelessWidget implements KineticsModel {
             const SizedBox(width: 16),
             Expanded(
               child: TextFormField(
+                controller: controllers?[adsorptionConstants[1].replaceAll(RegExp(r'[{}]'), '')],
                 decoration: InputDecoration(
                   labelText: adsorptionConstants[1],
                   border: const OutlineInputBorder(),
@@ -135,6 +141,7 @@ class EleyRidealModel extends StatelessWidget implements KineticsModel {
             children: [
               Expanded(
                 child: TextFormField(
+                  controller: controllers?['K_eq_$reactionType'],
                   decoration: const InputDecoration(
                     labelText: 'K_eq',
                     border: OutlineInputBorder(),

@@ -3,6 +3,7 @@ import '../screens/about_screen.dart';
 import '../screens/simulator/simulator_screen.dart';
 import '../screens/parameter_estimation/parameter_estimation_screen.dart';
 import '../screens/configuration_manager/configuration_manager_screen.dart';
+import '../../models/simulator_configuration.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -13,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  SimulatorConfiguration? _pendingConfiguration;
   
   void _onItemTapped(int index) {
     setState(() {
@@ -26,13 +28,35 @@ class _HomeScreenState extends State<HomeScreen> {
     Widget contentWidget;
     switch (_selectedIndex) {
       case 0:
-        contentWidget = const SimulatorScreen();
+        contentWidget = SimulatorScreen(
+          initialConfiguration: _pendingConfiguration,
+          onConfigurationLoaded: () {
+            // Limpar configuração pendente após carregamento
+            _pendingConfiguration = null;
+          },
+        );
         break;
       case 1:
         contentWidget = ConfigurationManagerScreen(
           onNavigateToSimulator: () {
             setState(() {
               _selectedIndex = 0; // Volta para o Simulator
+            });
+          },
+          onLoadConfiguration: (config) {
+            // Definir configuração pendente e navegar para o simulador
+            setState(() {
+              _pendingConfiguration = config;
+              _selectedIndex = 0;
+            });
+            
+            // Força uma atualização após um pequeno delay para garantir que a interface seja atualizada
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (mounted) {
+                setState(() {
+                  // Força uma reconstrução completa
+                });
+              }
             });
           },
         );

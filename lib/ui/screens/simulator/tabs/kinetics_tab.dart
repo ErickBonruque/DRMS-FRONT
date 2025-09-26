@@ -4,9 +4,17 @@ import '../models/power_law_model.dart';
 import '../models/eley_rideal_model.dart';
 import '../models/langmuir_hinshelwood_model.dart';
 import '../../../../constants/kinetics_constants.dart';
+import '../../../../models/simulator_configuration.dart';
 
 class KineticsTab extends StatefulWidget {
-  const KineticsTab({super.key});
+  final KineticsConfig? initialConfig;
+  final Function(KineticsConfig)? onConfigChanged;
+  
+  const KineticsTab({
+    super.key,
+    this.initialConfig,
+    this.onConfigChanged,
+  });
 
   @override
   State<KineticsTab> createState() => KineticsTabState();
@@ -57,6 +65,156 @@ class KineticsTabState extends State<KineticsTab> {
     'DRM': 'Dry Methane Reforming',
     'WGS': 'Water-Gas-Shift',
   };
+
+  // Controllers para os parâmetros dos modelos
+  Map<String, TextEditingController> _parameterControllers = {};
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Inicializar controllers para parâmetros
+    _initializeParameterControllers();
+    
+    // Carregar configuração inicial se fornecida
+    if (widget.initialConfig != null) {
+      _loadConfiguration(widget.initialConfig!);
+    }
+    
+    // Adicionar listeners para notificar mudanças
+    _parameterControllers.values.forEach((controller) {
+      controller.addListener(_notifyConfigChanged);
+    });
+  }
+
+  @override
+  void dispose() {
+    _parameterControllers.values.forEach((controller) => controller.dispose());
+    super.dispose();
+  }
+
+  void _initializeParameterControllers() {
+    // Parâmetros comuns para todos os modelos
+    final reactions = ['SMR', 'DRM', 'WGS'];
+    
+    for (final reaction in reactions) {
+      // Parâmetros básicos (A, E)
+      _parameterControllers['A_$reaction'] = TextEditingController();
+      _parameterControllers['E_$reaction'] = TextEditingController();
+      
+      // Power-Law: alpha, beta, K_eq
+      _parameterControllers['alpha_$reaction'] = TextEditingController();
+      _parameterControllers['beta_$reaction'] = TextEditingController();
+      _parameterControllers['K_eq_$reaction'] = TextEditingController();
+      
+      // Eley-Rideal: constantes de adsorção específicas
+      switch (reaction) {
+        case 'SMR':
+          _parameterControllers['K_CH_4, SMR'] = TextEditingController();
+          _parameterControllers['K_H_2O, SMR'] = TextEditingController();
+          break;
+        case 'DRM':
+          _parameterControllers['K_CH_4, DRM'] = TextEditingController();
+          _parameterControllers['K_CO_2, DRM'] = TextEditingController();
+          break;
+        case 'WGS':
+          _parameterControllers['K_CO, WGS'] = TextEditingController();
+          _parameterControllers['K_H_2O, WGS'] = TextEditingController();
+          break;
+      }
+      
+      // Langmuir-Hinshelwood: constantes para reagentes e produtos
+      switch (reaction) {
+        case 'SMR':
+          _parameterControllers['K_CH4_$reaction'] = TextEditingController();
+          _parameterControllers['K_H2O_$reaction'] = TextEditingController();
+          _parameterControllers['K_CO_$reaction'] = TextEditingController();
+          _parameterControllers['K_H2_$reaction'] = TextEditingController();
+          break;
+        case 'DRM':
+          _parameterControllers['K_CH4_$reaction'] = TextEditingController();
+          _parameterControllers['K_CO2_$reaction'] = TextEditingController();
+          _parameterControllers['K_CO_$reaction'] = TextEditingController();
+          _parameterControllers['K_H2_$reaction'] = TextEditingController();
+          break;
+        case 'WGS':
+          _parameterControllers['K_CO_$reaction'] = TextEditingController();
+          _parameterControllers['K_H2O_$reaction'] = TextEditingController();
+          _parameterControllers['K_CO2_$reaction'] = TextEditingController();
+          _parameterControllers['K_H2_$reaction'] = TextEditingController();
+          break;
+      }
+    }
+  }
+
+  void _loadConfiguration(KineticsConfig config) {
+    setState(() {
+      selectedReactions = Map<String, bool>.from(config.selectedReactions);
+      selectedKineticsForReaction = Map<String, String>.from(config.selectedKineticsForReaction);
+      isReversible = Map<String, bool>.from(config.isReversible);
+      selectedRateUnit = config.selectedRateUnit;
+      
+      // Carregar parâmetros nos controllers
+      config.modelParameters.forEach((param, value) {
+        if (_parameterControllers.containsKey(param)) {
+          _parameterControllers[param]!.text = value;
+        }
+      });
+    });
+  }
+
+  void _notifyConfigChanged() {
+    if (widget.onConfigChanged != null) {
+      final config = _getCurrentConfiguration();
+      widget.onConfigChanged!(config);
+    }
+  }
+
+  KineticsConfig _getCurrentConfiguration() {
+    // Coletar parâmetros dos controllers
+    final Map<String, String> modelParameters = {};
+    _parameterControllers.forEach((param, controller) {
+      if (controller.text.isNotEmpty) {
+        modelParameters[param] = controller.text;
+      }
+    });
+
+    return KineticsConfig(
+      selectedReactions: selectedReactions,
+      selectedKineticsForReaction: selectedKineticsForReaction,
+      isReversible: isReversible,
+      selectedRateUnit: selectedRateUnit,
+      modelParameters: modelParameters,
+    );
+  }
+
+  void _onReactionChanged(String reaction, bool? value) {
+    setState(() {
+      selectedReactions[reaction] = value ?? false;
+    });
+    _notifyConfigChanged();
+  }
+
+  void _onKineticsModelChanged(String reaction, String? value) {
+    setState(() {
+      selectedKineticsForReaction[reaction] = value ?? 'Power-Law';
+    });
+    _notifyConfigChanged();
+  }
+
+  void _onReversibilityChanged(String reaction, bool? value) {
+    setState(() {
+      isReversible[reaction] = value ?? false;
+    });
+    _notifyConfigChanged();
+  }
+
+  void _onRateUnitChanged(String? value) {
+    setState(() {
+      selectedRateUnit = value ?? KineticsConstants.rateUnits[0];
+    });
+    _notifyConfigChanged();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,11 +267,7 @@ class KineticsTabState extends State<KineticsTab> {
             ...selectedReactions.keys.map((reaction) => CheckboxListTile(
               title: Text(reactionNames[reaction]!),
               value: selectedReactions[reaction],
-              onChanged: (value) {
-                setState(() {
-                  selectedReactions[reaction] = value!;
-                });
-              },
+              onChanged: (value) => _onReactionChanged(reaction, value),
               dense: true,
               controlAffinity: ListTileControlAffinity.leading,
             )).toList(),
@@ -184,11 +338,7 @@ class KineticsTabState extends State<KineticsTab> {
                       children: [
                         Checkbox(
                           value: isReversible[reactionType],
-                          onChanged: (value) {
-                            setState(() {
-                              isReversible[reactionType] = value!;
-                            });
-                          },
+                          onChanged: (value) => _onReversibilityChanged(reactionType, value),
                         ),
                         const Text('Reversible'),
                       ],
@@ -208,11 +358,7 @@ class KineticsTabState extends State<KineticsTab> {
                   items: kineticsOptions
                       .map((k) => DropdownMenuItem(value: k, child: Text(k)))
                       .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedKineticsForReaction[reactionType] = value!;
-                    });
-                  },
+                  onChanged: (value) => _onKineticsModelChanged(reactionType, value),
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -237,17 +383,20 @@ class KineticsTabState extends State<KineticsTab> {
         return EleyRidealModel(
           isReversible: isReversible[reactionType]!,
           reactionType: reactionType,
+          controllers: _parameterControllers,
         );
       case 'Langmuir-Hinshelwood':
         return LangmuirHinshelwoodModel(
           isReversible: isReversible[reactionType]!,
           reactionType: reactionType,
+          controllers: _parameterControllers,
         );
       case 'Power-Law':
       default:
         return PowerLawModel(
           isReversible: isReversible[reactionType]!,
           reactionType: reactionType,
+          controllers: _parameterControllers,
         );
     }
   }
@@ -260,11 +409,7 @@ class KineticsTabState extends State<KineticsTab> {
         items: KineticsConstants.rateUnits
             .map((unit) => DropdownMenuItem(value: unit, child: Text(unit)))
             .toList(),
-        onChanged: (value) {
-          setState(() {
-            selectedRateUnit = value!;
-          });
-        },
+        onChanged: (value) => _onRateUnitChanged(value),
         decoration: const InputDecoration(),
       ),
     );

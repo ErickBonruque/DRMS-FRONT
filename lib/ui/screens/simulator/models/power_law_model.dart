@@ -6,11 +6,13 @@ import '../../../../constants/kinetics_constants.dart';
 class PowerLawModel extends StatelessWidget implements KineticsModel {
   final bool isReversible;
   final String reactionType;
+  final Map<String, TextEditingController>? controllers;
 
   const PowerLawModel({
     super.key,
     required this.isReversible,
     required this.reactionType,
+    this.controllers,
   });
 
   @override
@@ -72,6 +74,7 @@ class PowerLawModel extends StatelessWidget implements KineticsModel {
           children: [
             Expanded(
               child: TextFormField(
+                controller: controllers?['A_$reactionType'],
                 decoration: InputDecoration(
                   labelText: 'A_$reactionType',
                   border: const OutlineInputBorder(),
@@ -82,6 +85,7 @@ class PowerLawModel extends StatelessWidget implements KineticsModel {
             const SizedBox(width: 16),
             Expanded(
               child: TextFormField(
+                controller: controllers?['E_$reactionType'],
                 decoration: InputDecoration(
                   labelText: 'E_$reactionType',
                   border: const OutlineInputBorder(),
@@ -96,6 +100,7 @@ class PowerLawModel extends StatelessWidget implements KineticsModel {
           children: [
             Expanded(
               child: TextFormField(
+                controller: controllers?['alpha_$reactionType'],
                 decoration: const InputDecoration(
                   labelText: 'α',
                   border: OutlineInputBorder(),
@@ -106,6 +111,7 @@ class PowerLawModel extends StatelessWidget implements KineticsModel {
             const SizedBox(width: 16),
             Expanded(
               child: TextFormField(
+                controller: controllers?['beta_$reactionType'],
                 decoration: const InputDecoration(
                   labelText: 'β',
                   border: OutlineInputBorder(),
@@ -121,6 +127,7 @@ class PowerLawModel extends StatelessWidget implements KineticsModel {
             children: [
               Expanded(
                 child: TextFormField(
+                  controller: controllers?['K_eq_$reactionType'],
                   decoration: const InputDecoration(
                     labelText: 'K_eq',
                     border: OutlineInputBorder(),

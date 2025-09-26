@@ -4,10 +4,12 @@ import '../../../services/configuration_service.dart';
 
 class ConfigurationManagerScreen extends StatefulWidget {
   final VoidCallback? onNavigateToSimulator;
+  final Function(SimulatorConfiguration)? onLoadConfiguration;
   
   const ConfigurationManagerScreen({
     super.key,
     this.onNavigateToSimulator,
+    this.onLoadConfiguration,
   });
 
   @override
@@ -535,6 +537,11 @@ class _ConfigurationManagerScreenState extends State<ConfigurationManagerScreen>
       // Salvar como última configuração usada
       await _configService.setLastUsedConfiguration(config.id);
       
+      // Carregar configuração no simulador
+      if (widget.onLoadConfiguration != null) {
+        widget.onLoadConfiguration!(config);
+      }
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -549,6 +556,12 @@ class _ConfigurationManagerScreenState extends State<ConfigurationManagerScreen>
             ),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              bottom: 80, // Posiciona mais acima da parte inferior
+              left: 16,
+              right: 16,
+            ),
+            duration: Duration(seconds: 2), // Reduz duração para ser menos intrusivo
           ),
         );
         

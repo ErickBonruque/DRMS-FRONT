@@ -6,11 +6,13 @@ import '../../../../constants/kinetics_constants.dart';
 class LangmuirHinshelwoodModel extends StatelessWidget implements KineticsModel {
   final bool isReversible;
   final String reactionType;
+  final Map<String, TextEditingController>? controllers;
 
   const LangmuirHinshelwoodModel({
     super.key,
     required this.isReversible,
     required this.reactionType,
+    this.controllers,
   });
 
   @override
@@ -97,6 +99,7 @@ class LangmuirHinshelwoodModel extends StatelessWidget implements KineticsModel 
           children: [
             Expanded(
               child: TextFormField(
+                controller: controllers?['A_$reactionType'],
                 decoration: InputDecoration(
                   labelText: 'A_$reactionType',
                   border: const OutlineInputBorder(),
@@ -107,6 +110,7 @@ class LangmuirHinshelwoodModel extends StatelessWidget implements KineticsModel 
             const SizedBox(width: 16),
             Expanded(
               child: TextFormField(
+                controller: controllers?['E_$reactionType'],
                 decoration: InputDecoration(
                   labelText: 'E_$reactionType',
                   border: const OutlineInputBorder(),
@@ -125,6 +129,7 @@ class LangmuirHinshelwoodModel extends StatelessWidget implements KineticsModel 
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: TextFormField(
+                  controller: controllers?['K_${reactant}_$reactionType'],
                   decoration: InputDecoration(
                     labelText: 'K_{$reactant, $reactionType}',
                     border: const OutlineInputBorder(),
@@ -144,6 +149,7 @@ class LangmuirHinshelwoodModel extends StatelessWidget implements KineticsModel 
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: TextFormField(
+                  controller: controllers?['K_${product}_$reactionType'],
                   decoration: InputDecoration(
                     labelText: 'K_{$product, $reactionType}',
                     border: const OutlineInputBorder(),
@@ -160,6 +166,7 @@ class LangmuirHinshelwoodModel extends StatelessWidget implements KineticsModel 
             children: [
               Expanded(
                 child: TextFormField(
+                  controller: controllers?['K_eq_$reactionType'],
                   decoration: const InputDecoration(
                     labelText: 'K_eq',
                     border: OutlineInputBorder(),
