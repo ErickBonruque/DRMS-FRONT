@@ -318,6 +318,7 @@ class _ResultsTabState extends State<ResultsTab> {
   
   /// Atualiza os dados de exibição com base no tempo selecionado
   /// Aplica interpolação se o tempo não existir exatamente
+  /// Usa último valor disponível se tempo exceder a faixa disponível
   void _updateDisplayData() {
     if (widget.simulationResults == null || 
         !widget.simulationResults!.containsKey(_selectedArray)) {
@@ -332,6 +333,20 @@ class _ResultsTabState extends State<ResultsTab> {
     }
     
     final iterations = arrayData.length;
+    final maxTime = (iterations - 1).toDouble();
+    
+    // NOVO: Verificar se o tempo solicitado excede a faixa disponível
+    if (_selectedTime > maxTime) {
+      // Usar o último tempo disponível
+      _displayData = arrayData[iterations - 1];
+      _interpolationInfo = {
+        'outOfRange': true,
+        'requestedTime': _selectedTime,
+        'maxAvailableTime': maxTime,
+        'usedTime': maxTime,
+      };
+      return;
+    }
     
     // Verificar se o tempo corresponde exatamente a uma iteração existente
     final targetIteration = _selectedTime.round();
@@ -370,8 +385,10 @@ class _ResultsTabState extends State<ResultsTab> {
       final upperTime = surroundingPoints['upperTime'];
       
       if (lowerIndex < 0 || upperIndex >= iterations) {
-        // Tempo fora do range válido
-        _displayData = null;
+        // Tempo fora do range válido - usar iteração mais próxima
+        final nearestIteration = _selectedTime.round().clamp(0, iterations - 1);
+        _displayData = arrayData[nearestIteration];
+        _interpolationInfo = null;
         return;
       }
       
@@ -434,9 +451,14 @@ class _ResultsTabState extends State<ResultsTab> {
     }
   }
   
-  /// Constrói o aviso estilizado de interpolação
+  /// Constrói o aviso estilizado de interpolação ou alerta de tempo fora da faixa
   Widget _buildInterpolationWarning() {
     if (_interpolationInfo == null) return SizedBox.shrink();
+    
+    // Verificar se é um aviso de tempo fora da faixa
+    if (_interpolationInfo!['outOfRange'] == true) {
+      return _buildOutOfRangeWarning();
+    }
     
     final lowerTime = _interpolationInfo!['lowerTime'];
     final upperTime = _interpolationInfo!['upperTime'];
@@ -598,6 +620,190 @@ class _ResultsTabState extends State<ResultsTab> {
                     ),
                     child: CustomPaint(
                       painter: InterpolationLinePainter(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Constrói o alerta quando o tempo solicitado está fora da faixa disponível
+  Widget _buildOutOfRangeWarning() {
+    final requestedTime = _interpolationInfo!['requestedTime'];
+    final maxAvailableTime = _interpolationInfo!['maxAvailableTime'];
+    final usedTime = _interpolationInfo!['usedTime'];
+    
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          // Ícone circular vermelho chamativo
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.red.shade400,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.withOpacity(0.3),
+                  blurRadius: 8,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.schedule_outlined,
+              color: Colors.white,
+              size: 18,
+            ),
+          ),
+          
+          SizedBox(width: 12),
+          
+          // Container principal do aviso
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.red.shade50,
+                    Colors.orange.shade50,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.red.shade300,
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Título do aviso
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.warning_outlined,
+                              color: Colors.red.shade700,
+                              size: 16,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'Tempo Fora da Faixa Disponível',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red.shade800,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        SizedBox(height: 6),
+                        
+                        // Informações dos tempos
+                        Text(
+                          'Tempo solicitado: ${requestedTime.toStringAsFixed(2)} (não disponível)',
+                          style: TextStyle(
+                            color: Colors.grey.shade700,
+                            fontSize: 11,
+                          ),
+                        ),
+                        
+                        SizedBox(height: 4),
+                        
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.red.shade300, width: 1),
+                              ),
+                              child: Text(
+                                'Máximo: ${maxAvailableTime.toStringAsFixed(1)}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.red.shade700,
+                                ),
+                              ),
+                            ),
+                            
+                            SizedBox(width: 8),
+                            
+                            Icon(
+                              Icons.arrow_forward,
+                              size: 12,
+                              color: Colors.grey.shade500,
+                            ),
+                            
+                            SizedBox(width: 8),
+                            
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.green.shade300, width: 1),
+                              ),
+                              child: Text(
+                                'Usado: ${usedTime.toStringAsFixed(1)}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        SizedBox(height: 6),
+                        
+                        Text(
+                          'Exibindo resultados para o último tempo disponível.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Indicador visual de limite
+                  Container(
+                    width: 40,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: CustomPaint(
+                      painter: OutOfRangePainter(),
                     ),
                   ),
                 ],
@@ -1162,6 +1368,55 @@ class InterpolationLinePainter extends CustomPainter {
       ..strokeWidth = 1.0;
       
     canvas.drawCircle(interpolatedPoint, 3.0, outlinePaint);
+  }
+  
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+/// Custom painter para indicar tempo fora da faixa
+class OutOfRangePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.red.shade400
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+    
+    final fillPaint = Paint()
+      ..color = Colors.red.shade100
+      ..style = PaintingStyle.fill;
+
+    // Desenhar barra de progresso com limite
+    final barRect = Rect.fromLTWH(5, size.height / 2 - 2, size.width - 10, 4);
+    canvas.drawRect(barRect, fillPaint);
+    
+    // Desenhar linha de limite no final
+    final limitLine = Offset(size.width - 8, size.height / 2 - 6);
+    final limitLineEnd = Offset(size.width - 8, size.height / 2 + 6);
+    canvas.drawLine(limitLine, limitLineEnd, paint);
+    
+    // Desenhar seta indicando que foi além do limite
+    final arrowPaint = Paint()
+      ..color = Colors.red.shade600
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+      
+    final arrowStart = Offset(size.width - 5, size.height / 2);
+    final arrowEnd = Offset(size.width - 2, size.height / 2);
+    canvas.drawLine(arrowStart, arrowEnd, arrowPaint);
+    
+    // Ponta da seta
+    canvas.drawLine(
+      Offset(size.width - 4, size.height / 2 - 2),
+      Offset(size.width - 2, size.height / 2),
+      arrowPaint,
+    );
+    canvas.drawLine(
+      Offset(size.width - 4, size.height / 2 + 2),
+      Offset(size.width - 2, size.height / 2),
+      arrowPaint,
+    );
   }
   
   @override

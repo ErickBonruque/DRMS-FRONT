@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http; // Added import for http package
-import 'dart:convert';
-import 'dart:math';
 import 'tabs/inlet_flows_tab.dart';
 import 'tabs/reactor_tab.dart';
 import 'tabs/kinetics_tab.dart';
@@ -10,6 +7,7 @@ import 'tabs/simulate_tab.dart';
 import 'tabs/results_tab.dart';
 import '../../../models/simulator_configuration.dart';
 import '../../../services/configuration_service.dart';
+import '../../../services/api_service.dart';
 
 class SimulatorScreen extends StatefulWidget {
   final SimulatorConfiguration? initialConfiguration;
@@ -87,6 +85,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
   bool isLoading = false;
   
   final ConfigurationService _configService = ConfigurationService();
+  final ApiService _apiService = ApiService();
   
   // Configurações das abas
   InletFlowsConfig _inletFlowsConfig = InletFlowsConfig();
@@ -121,73 +120,307 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
   }
 
   void _runSimulation() async {
+    // Validar se todas as configurações estão preenchidas corretamente
+    if (!_validateConfiguration()) {
+      return;
+    }
+
     setState(() {
       isLoading = true;
     });
     
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Starting simulation...')),
+      const SnackBar(
+        content: Row(
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              strokeWidth: 2,
+            ),
+            SizedBox(width: 16),
+            Expanded(child: Text('Iniciando simulação...')),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+      ),
     );
     
-    // Chama a API para obter os resultados, n_chunks=5 para testes
-    final url = Uri.parse('http://127.0.0.1:5000/results?n_chunks=100');
     try {
-      print('Calling API at: $url');
-      final response = await http.get(url);
-      print('Response status code: ${response.statusCode}');
+      // Criar configuração atual com todos os dados das abas
+      final currentConfig = SimulatorConfiguration(
+        id: 'temp_simulation_config',
+        name: 'Configuração Atual',
+        createdAt: DateTime.now(),
+        inletFlows: _inletFlowsConfig,
+        reactor: _reactorConfig,
+        kinetics: _kineticsConfig,
+        heat: _heatConfig,
+        simulate: _simulateConfig,
+      );
       
-      if (response.statusCode == 200) {
-        print('Simulation data retrieved successfully.');
-        print('Response body length: ${response.body.length}');
-        print('Response body preview: ${response.body.substring(0, min(200, response.body.length))}');
-        
-        try {
-          // Decodifica a resposta JSON
-          final data = json.decode(response.body);
-          print('JSON decoded successfully. Keys: ${data.keys.toList()}');
-          
-          if (data.containsKey('CA_history')) {
-            print('CA_history found. Length: ${data['CA_history'].length}');
-            if (data['CA_history'].isNotEmpty) {
-              print('First iteration shape: ${data['CA_history'][0].length} x ${data['CA_history'][0][0].length}');
-            }
-          } else {
-            print('CA_history not found in response data');
-          }
-          
-          setState(() {
-            simulationResults = data;
-            isLoading = false;
-            // Navega para a aba de resultados
-            _selectedIndex = 5; 
-          });
-        } catch (e) {
-          print('Error decoding JSON: $e');
-          setState(() {
-            isLoading = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error parsing response data: $e')),
-          );
+      print('Executando simulação com configuração:');
+      print('- Metano: ${_inletFlowsConfig.methanFlow} ${_inletFlowsConfig.methaneFlowUnit}');
+      print('- CO2: ${_inletFlowsConfig.co2Flow} ${_inletFlowsConfig.co2FlowUnit}');
+      print('- H2O: ${_inletFlowsConfig.h2oFlow} ${_inletFlowsConfig.h2oFlowUnit}');
+      print('- Pressão: ${_inletFlowsConfig.pressure} ${_inletFlowsConfig.pressureUnit}');
+      print('- Comprimento do reator: ${_reactorConfig.length} ${_reactorConfig.lengthUnit}');
+      print('- Diâmetro do reator: ${_reactorConfig.diameter} ${_reactorConfig.diameterUnit}');
+      print('- Temperatura de entrada: ${_heatConfig.inletTemperature} ${_heatConfig.selectedInletTempUnit}');
+      
+      // Testar conectividade antes de enviar
+      final isConnected = await _apiService.testConnection();
+      if (!isConnected) {
+        _showBackendConnectionError();
+        return;
+      }
+      
+      // Enviar dados para o backend
+      final data = await _apiService.runSimulation(currentConfig);
+      
+      print('Simulação executada com sucesso!');
+      print('Dados recebidos - chaves: ${data.keys.toList()}');
+      
+      if (data.containsKey('history')) {
+        final history = data['history'];
+        if (history != null && history.containsKey('CA')) {
+          print('CA_history encontrado. Número de chunks: ${history['CA'].length}');
         }
-      } else {
-        print('Error retrieving simulation data: ${response.body}');
-        setState(() {
-          isLoading = false;
-        });
+      }
+      
+      setState(() {
+        simulationResults = data;
+        isLoading = false;
+        // Navegar automaticamente para a aba de resultados
+        _selectedIndex = 5; 
+      });
+      
+      // Mostrar mensagem de sucesso
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: Failed to retrieve simulation data')),
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('Simulação executada com sucesso!')),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
         );
       }
+      
     } catch (e) {
-      print('Connection error: $e');
+      print('Erro durante a simulação: $e');
+      
       setState(() {
         isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text('Erro na simulação: ${e.toString()}'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'DETALHES',
+              textColor: Colors.white,
+              onPressed: () {
+                _showErrorDetails(e.toString());
+              },
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Valida se a configuração está completa antes de executar a simulação
+  bool _validateConfiguration() {
+    List<String> warnings = [];
+    
+    // Validar Inlet Flows - agora apenas avisos
+    if (_inletFlowsConfig.methanFlow.isEmpty && _inletFlowsConfig.co2Flow.isEmpty && _inletFlowsConfig.h2oFlow.isEmpty) {
+      warnings.add('Nenhum fluxo de entrada definido - usando valores padrão');
+    }
+    
+    // Validar Reactor - agora apenas avisos
+    if (_reactorConfig.length.isEmpty) {
+      warnings.add('Comprimento do reator não definido - usando valor padrão (0.03 m)');
+    }
+    if (_reactorConfig.diameter.isEmpty) {
+      warnings.add('Diâmetro do reator não definido - usando valor padrão (0.0063 m)');
+    }
+    
+    // Validar Heat - agora apenas avisos
+    if (_heatConfig.inletTemperature.isEmpty) {
+      warnings.add('Temperatura de entrada não definida - usando valor padrão (973.15 K)');
+    }
+    if (_heatConfig.externalTemperature.isEmpty) {
+      warnings.add('Temperatura externa não definida - usando valor padrão (973.15 K)');
+    }
+    
+    // Se há avisos, mostrar dialog informativo, mas permitir continuar
+    if (warnings.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.info, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Valores Padrão Serão Usados'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Os seguintes valores padrão serão usados na simulação:'),
+              SizedBox(height: 8),
+              ...warnings.map((warning) => Padding(
+                padding: EdgeInsets.only(left: 16, bottom: 4),
+                child: Text('• $warning', style: TextStyle(fontSize: 12)),
+              )),
+              SizedBox(height: 8),
+              Text(
+                'Para resultados mais precisos, configure os valores nas abas correspondentes.',
+                style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK'),
+            ),
+          ],
+        ),
       );
     }
+    
+    return true; // Sempre permite continuar, usando valores padrão quando necessário
+  }
+
+  /// Mostra detalhes do erro em um dialog
+  void _showErrorDetails(String error) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.bug_report, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Detalhes do Erro'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            error,
+            style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Fechar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Mostra erro de conexão com o backend e instruções para iniciá-lo
+  void _showBackendConnectionError() {
+    setState(() {
+      isLoading = false;
+    });
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.cloud_off, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Backend Não Encontrado'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Não foi possível conectar ao servidor backend.',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Para executar a simulação, você precisa iniciar o backend primeiro:',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 8),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: SelectableText(
+                  _apiService.getBackendStartupInstructions(),
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+              Row(
+                children: [
+                  Icon(Icons.info, color: Colors.blue, size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Após iniciar o backend, tente executar a simulação novamente.',
+                      style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Fechar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _runSimulation(); // Tentar novamente
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Tentar Novamente'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _exportData() {

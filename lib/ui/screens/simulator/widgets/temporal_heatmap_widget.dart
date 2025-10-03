@@ -194,11 +194,6 @@ class _TemporalHeatmapWidgetState extends State<TemporalHeatmapWidget> {
     final rows = widget.timeSeriesData.isNotEmpty && widget.timeSeriesData[0].isNotEmpty 
         ? widget.timeSeriesData[0].length 
         : 0;
-    final cols = widget.timeSeriesData.isNotEmpty && 
-                 widget.timeSeriesData[0].isNotEmpty && 
-                 widget.timeSeriesData[0][0].isNotEmpty
-        ? widget.timeSeriesData[0][0].length 
-        : 0;
         
     return Container(
       width: 120,
@@ -208,7 +203,7 @@ class _TemporalHeatmapWidgetState extends State<TemporalHeatmapWidget> {
           RotatedBox(
             quarterTurns: 3,
             child: Text(
-              'Posição Espacial',
+              'Linhas da Grade',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[700],
@@ -249,7 +244,7 @@ class _TemporalHeatmapWidgetState extends State<TemporalHeatmapWidget> {
               ),
               const SizedBox(height: 4),
               Text(
-                '($rows×$cols)',
+                '(Linha ${rows-1})',
                 style: TextStyle(
                   fontSize: 9,
                   color: Colors.grey[600],
@@ -441,7 +436,13 @@ class _TemporalHeatmapWidgetState extends State<TemporalHeatmapWidget> {
   }
 
   Widget _buildSelectedValueInfo() {
-    final value = widget.timeSeriesData[selectedTime!][selectedRow!][selectedCol!];
+    // Calcular a média da linha selecionada
+    double rowSum = 0.0;
+    final cols = widget.timeSeriesData[selectedTime!][selectedRow!].length;
+    for (int col = 0; col < cols; col++) {
+      rowSum += widget.timeSeriesData[selectedTime!][selectedRow!][col];
+    }
+    final value = rowSum / cols;
     final unit = _getUnit(widget.arrayName);
     
     return Container(
@@ -496,9 +497,9 @@ class _TemporalHeatmapWidgetState extends State<TemporalHeatmapWidget> {
                 children: [
                   _buildInfoChip('Tempo', '$selectedTime', Colors.green),
                   const SizedBox(width: 8),
-                  _buildInfoChip('Posição', '($selectedCol, $selectedRow)', Colors.purple),
+                  _buildInfoChip('Linha', 'Linha $selectedRow', Colors.purple),
                   const SizedBox(width: 8),
-                  _buildInfoChip('Valor', '${value.toStringAsFixed(4)} $unit', Colors.orange),
+                  _buildInfoChip('Média', '${value.toStringAsFixed(4)} $unit', Colors.orange),
                 ],
               ),
             ],
@@ -551,24 +552,23 @@ class _TemporalHeatmapWidgetState extends State<TemporalHeatmapWidget> {
     final size = box.size;
     final timeSteps = widget.timeSeriesData.length;
     final rows = widget.timeSeriesData[0].length;
-    final cols = widget.timeSeriesData[0][0].length;
     
     // Calcular dimensões do heatmap (considerando aspect ratio 2:1)
     final heatmapWidth = size.width - 80; // desconta colorbar e padding
     final heatmapHeight = size.height;
     
-    // No gráfico temporal, X = tempo, Y = posição espacial combinada
+    // No gráfico temporal, X = tempo, Y = linha da grade
     final cellWidth = heatmapWidth / timeSteps;
-    final cellHeight = heatmapHeight / (rows * cols);
+    final cellHeight = heatmapHeight / rows;
     
     final timeIndex = (localPosition.dx / cellWidth).floor();
-    final spatialIndex = (localPosition.dy / cellHeight).floor();
+    final rowIndex = (localPosition.dy / cellHeight).floor();
     
     if (timeIndex >= 0 && timeIndex < timeSteps && 
-        spatialIndex >= 0 && spatialIndex < (rows * cols)) {
+        rowIndex >= 0 && rowIndex < rows) {
       
-      final row = spatialIndex ~/ cols;
-      final col = spatialIndex % cols;
+      final row = rowIndex;
+      final col = 0; // Representa a linha inteira
       
       setState(() {
         selectedTime = timeIndex;
@@ -579,24 +579,46 @@ class _TemporalHeatmapWidgetState extends State<TemporalHeatmapWidget> {
   }
 
   double _getMinValue() {
-    double min = widget.timeSeriesData[0][0][0];
-    for (final timeData in widget.timeSeriesData) {
-      for (final row in timeData) {
-        for (final value in row) {
-          if (value < min) min = value;
+    if (widget.timeSeriesData.isEmpty || 
+        widget.timeSeriesData[0].isEmpty || 
+        widget.timeSeriesData[0][0].isEmpty) {
+      return 0.0;
+    }
+    
+    // Calcular min baseado nas médias por linha
+    double min = double.infinity;
+    for (int t = 0; t < widget.timeSeriesData.length; t++) {
+      for (int row = 0; row < widget.timeSeriesData[t].length; row++) {
+        double rowSum = 0.0;
+        final cols = widget.timeSeriesData[t][row].length;
+        for (int col = 0; col < cols; col++) {
+          rowSum += widget.timeSeriesData[t][row][col];
         }
+        final avgValue = rowSum / cols;
+        if (avgValue < min) min = avgValue;
       }
     }
     return min;
   }
 
   double _getMaxValue() {
-    double max = widget.timeSeriesData[0][0][0];
-    for (final timeData in widget.timeSeriesData) {
-      for (final row in timeData) {
-        for (final value in row) {
-          if (value > max) max = value;
+    if (widget.timeSeriesData.isEmpty || 
+        widget.timeSeriesData[0].isEmpty || 
+        widget.timeSeriesData[0][0].isEmpty) {
+      return 1.0;
+    }
+    
+    // Calcular max baseado nas médias por linha
+    double max = double.negativeInfinity;
+    for (int t = 0; t < widget.timeSeriesData.length; t++) {
+      for (int row = 0; row < widget.timeSeriesData[t].length; row++) {
+        double rowSum = 0.0;
+        final cols = widget.timeSeriesData[t][row].length;
+        for (int col = 0; col < cols; col++) {
+          rowSum += widget.timeSeriesData[t][row][col];
         }
+        final avgValue = rowSum / cols;
+        if (avgValue > max) max = avgValue;
       }
     }
     return max;
@@ -641,48 +663,53 @@ class TemporalHeatmapPainter extends CustomPainter {
     final cols = timeSeriesData[0][0].length;
     
     final cellWidth = size.width / timeSteps;
-    final cellHeight = size.height / (rows * cols);
+    final cellHeight = size.height / rows; // Altura baseada apenas nas linhas
 
     final colorGradient = _getColorGradient();
     
     // Desenhar o heatmap temporal
+    // Vamos usar a média por linha para ter uma visualização mais clara
     for (int t = 0; t < timeSteps; t++) {
       for (int row = 0; row < rows; row++) {
+        // Calcular a média da linha para este tempo
+        double rowSum = 0.0;
         for (int col = 0; col < cols; col++) {
-          final value = timeSeriesData[t][row][col];
-          final normalizedValue = (value - minValue) / (maxValue - minValue);
+          rowSum += timeSeriesData[t][row][col];
+        }
+        final avgValue = rowSum / cols;
+        
+        final normalizedValue = (avgValue - minValue) / (maxValue - minValue);
+        
+        // Determinar cor baseada no valor normalizado
+        final color = _interpolateColor(colorGradient, normalizedValue);
+        
+        // Posição Y baseada na linha (row)
+        final yPosition = row * cellHeight;
+        
+        // Desenhar célula para a linha inteira
+        final rect = Rect.fromLTWH(
+          t * cellWidth,
+          yPosition,
+          cellWidth,
+          cellHeight,
+        );
+        
+        final paint = Paint()..color = color;
+        canvas.drawRect(rect, paint);
+        
+        // Destacar linha selecionada
+        if (selectedTime == t && selectedRow == row) {
+          final borderPaint = Paint()
+            ..color = Colors.white
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2;
+          canvas.drawRect(rect, borderPaint);
           
-          // Determinar cor baseada no valor normalizado
-          final color = _interpolateColor(colorGradient, normalizedValue);
-          
-          // Posição espacial combinada (row * cols + col)
-          final spatialIndex = row * cols + col;
-          
-          // Desenhar célula
-          final rect = Rect.fromLTWH(
-            t * cellWidth,
-            spatialIndex * cellHeight,
-            cellWidth,
-            cellHeight,
-          );
-          
-          final paint = Paint()..color = color;
-          canvas.drawRect(rect, paint);
-          
-          // Destacar célula selecionada
-          if (selectedTime == t && selectedRow == row && selectedCol == col) {
-            final borderPaint = Paint()
-              ..color = Colors.white
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 2;
-            canvas.drawRect(rect, borderPaint);
-            
-            final outerBorderPaint = Paint()
-              ..color = Colors.black
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 1;
-            canvas.drawRect(rect, outerBorderPaint);
-          }
+          final outerBorderPaint = Paint()
+            ..color = Colors.black
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1;
+          canvas.drawRect(rect, outerBorderPaint);
         }
       }
     }
